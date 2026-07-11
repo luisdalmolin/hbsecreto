@@ -36,6 +36,9 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# OpenAPI clients are generated from ../backend/openapi/v1.json
+/src/api/generated/
+
 example
 
 # generated native folders

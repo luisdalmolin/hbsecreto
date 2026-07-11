@@ -14,13 +14,13 @@ Use `npm run ios`, `npm run android`, or `npm run web` to open a target directly
 
 ## API contract
 
-The API SDK in `src/api/generated` is generated from `../backend/openapi/v1.json`. Do not edit generated files manually.
+The API SDK in `src/api/generated` is generated from `../backend/openapi/v1.json`. It is intentionally Git-ignored; do not edit it manually.
 
 ```sh
 npm run api:generate
 ```
 
-Call `configureApiClient(accessToken)` before a protected API request, then import endpoint functions such as `login`, `logout`, and `getCurrentUser` from `@/api/generated/sdk.gen`.
+Call `configureApiClient(accessToken)` before a protected API request, then import endpoint functions from their generated tag module, for example `@/api/generated/authentication/authentication`.
 
 ## Checks
 
