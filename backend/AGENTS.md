@@ -13,6 +13,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - inertiajs/inertia-laravel (INERTIA_LARAVEL) - v3
 - laravel/framework (LARAVEL) - v13
 - laravel/prompts (PROMPTS) - v0
+- laravel/sanctum (SANCTUM) - v4
 - laravel/wayfinder (WAYFINDER) - v0
 - larastan/larastan (LARASTAN) - v3
 - laravel/boost (BOOST) - v2
@@ -197,3 +198,11 @@ Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `
 - IMPORTANT: Activate `inertia-react-development` when working with Inertia React client-side patterns.
 
 </laravel-boost-guidelines>
+
+## API, Data, and OpenAPI
+
+- Keep versioned HTTP API routes under `/api/v1` and controllers under `app/Http/Controllers/Api`.
+- Keep API request and response DTOs under `app/Data/Api`; use typed constructor properties and `spatie/laravel-data` validation attributes where applicable.
+- Document API operations and API Data schemas with `OpenApi\Attributes` PHP attributes; do not use deprecated Swagger annotations.
+- Every operation must declare its path, unique `operationId`, tag, and all success/error responses. Secure operations must declare `security: [['bearerAuth' => []]]`; public operations omit it.
+- Keep shared OpenAPI metadata and the `bearerAuth` scheme in `app/OpenApi/OpenApiSpecification.php`. Regenerate the committed `openapi/v1.json` with `bin/generate-openapi` whenever API attributes change.
