@@ -36,7 +36,7 @@ The backend is API-first and starts at `/api/v1`. The initial authenticated-user
 | `POST /api/v1/auth/logout` | Revokes the current token. | Bearer token |
 | `GET /api/v1/me` | Returns the current user profile. | Bearer token |
 
-Responses use typed Spatie Laravel Data resources, never Eloquent models directly. Request validation and API errors use Brazilian Portuguese by default; source code, comments, schema descriptions, and developer documentation remain in English.
+Responses use typed Spatie Laravel Data classes, never Eloquent models, Laravel HTTP resource classes, or ad-hoc arrays. Request validation and API errors use Brazilian Portuguese by default; source code, comments, schema descriptions, and developer documentation remain in English.
 
 The API contract is documented in OpenAPI 3.1 and committed at `backend/openapi/v1.json`. The specification is generated from PHP attributes, keeping endpoint metadata and response schemas close to their controller and Data classes.
 
@@ -84,7 +84,7 @@ composer run openapi:generate
 
 - Version all public API routes under `/api/v1`.
 - Protect authenticated API routes with `auth:sanctum` and issue named tokens per device.
-- Use typed Spatie Data objects for every API request and response.
+- Use typed Spatie Data objects for every API request and response; do not use Laravel HTTP API resource classes.
 - Add OpenAPI attributes to every operation and API schema; regenerate `backend/openapi/v1.json` whenever the contract changes.
 - Keep user-facing backend messages localized and Brazilian Portuguese by default.
 - Cover API behavior with Pest feature tests and run Pint and PHPStan before merging.
