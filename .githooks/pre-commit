@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+
+set -eu
+
+repository_root="$(git rev-parse --show-toplevel)"
+
+cd "$repository_root/backend"
+
+composer validate --no-check-publish
+composer run openapi:generate
+
+if ! git -C "$repository_root" diff --quiet -- backend/openapi/v1.json; then
+    echo "OpenAPI contract is out of date. Stage the regenerated backend/openapi/v1.json before committing." >&2
+    exit 1
+fi
+
+composer run ci:check

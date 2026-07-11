@@ -82,6 +82,12 @@ See the complete approved model at [docs/data-model.md](../../../docs/data-model
 
 * Controllers in `app/Http/Controllers/Api/V1/` are thin: validate via Data, delegate to Action, and return Data. GET endpoints use Spatie Query Builder directly with explicit `allowedFilters`, `allowedIncludes`, `allowedSorts`, and `allowedFields`; no Action is needed for reads.
 
+### Pre-commit Checks
+
+- The versioned hook at `.githooks/pre-commit` runs Composer validation, regenerates and verifies the OpenAPI contract, and runs `composer run ci:check` before every commit.
+- Composer automatically configures the repository-local hook path after dependency installation. Run `composer run hooks:install` from `backend` to configure it manually.
+- Do not bypass the hook. Fix the failing check or stage the regenerated `backend/openapi/v1.json` when the API contract changes.
+
 ### External API Integrations
 - All external integrations must have a real implementation and a fake implementation.
 - All external integrations must implement a common interface for the integration itself.

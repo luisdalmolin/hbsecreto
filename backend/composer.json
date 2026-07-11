@@ -63,6 +63,7 @@
         "lint:check": [
             "pint --parallel --test"
         ],
+        "hooks:install": "sh bin/install-git-hooks",
         "openapi:generate": "@php bin/generate-openapi",
         "ci:check": [
             "Composer\\Config::disableProcessTimeout",
@@ -82,7 +83,8 @@
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
-            "@php artisan package:discover --ansi"
+            "@php artisan package:discover --ansi",
+            "@hooks:install"
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force",
