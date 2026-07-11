@@ -29,7 +29,8 @@ test('a user can sign in with a device token', function (): void {
 });
 
 test('sign in validates the request in Brazilian Portuguese', function (): void {
-    $response = $this->postJson('/api/v1/auth/login', []);
+    // This test intentionally submits an invalid payload to exercise Laravel Data validation.
+    $response = $this->withoutRequestValidation()->postJson('/api/v1/auth/login', []);
 
     $response
         ->assertUnprocessable()

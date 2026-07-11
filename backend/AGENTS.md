@@ -29,6 +29,7 @@ For a project overview, see [docs/project-overview.md](../../../docs/project-ove
 - The OpenAPI document is generated from PHP attributes and committed at `backend/openapi/v1.json`. Regenerate it with `composer run openapi:generate` after changing an API contract.
 - Every API endpoint must have a controller action, a Pest feature test, and OpenAPI metadata for its path, operation ID, tag, request body, and success/error responses.
 - API request objects and response resources use Spatie Laravel Data exclusively. Do not expose Eloquent models, use Laravel HTTP API resources, or construct ad-hoc response arrays in controllers.
+- Use camelCase for API Data properties and JSON fields. Database columns remain snake_case.
 - Use `Resource` Data classes for response-only transformations and `Data` classes for validated request input.
 - API JSON uses camelCase property names. Database columns remain Laravel-standard snake_case.
 - API authentication uses Sanctum bearer tokens, issued per named device. Protected routes use `auth:sanctum`; the current token is revoked on logout.
@@ -54,15 +55,15 @@ See the complete approved model at [docs/data-model.md](../../../docs/data-model
 
 ## Things this codebase deliberately avoids
 
-- **No meaningless arrays** We should always shoot for using typed and meaningfull data objects instead.
+- **No meaningless arrays.** Use typed, meaningful Data objects for application and API payloads.
 - **No Form Requests.** Input validation happens in Spatie Data objects.
 - **No Laravel API Resource classes.** Never create or extend `Illuminate\Http\Resources\Json\JsonResource`, resource collections, or files under `app/Http/Resources` for API output. Output shape must use `Spatie\LaravelData\Data` or `Spatie\LaravelData\Resource`.
-- **No inline `authorize()` / ad hoc `abort(403)` ownership checks** in controllers. Use `#[UsePolicy]` on the model + `#[Authorize]` on the controller method; existing student self-service actor guards are allowlisted in arch tests.
+- **No inline `authorize()` / ad hoc `abort(403)` ownership checks** in controllers. Use `#[UsePolicy]` on the model and `#[Authorize]` on the controller method.
 - **No database `ENUM` types.** Use `VARCHAR` + `CHECK` constraint matching a PHP enum.
 - **No PHPStan baselines or inline ignores.** Level 10 errors must be fixed.
 - **No multi-line commit messages, no `Co-Authored-By` trailers.**
 - **No hardcoded `Storage::disk('name')` or `Storage::fake('name')` in app/test code.** Use the default disk (call `Storage::` facade methods directly, `Storage::fake()` without args). If a non-default disk is genuinely needed, resolve its name from config (`config('filesystems.<key>')`) so environments can swap it — never inline the disk name.
-- **Morph-maps**: Every model using polymorphic relationships, needs to be declared in a morph map so we detach the code from the data as much as we can.
+- **Morph maps.** Every model using a polymorphic relationship must be declared in `AppServiceProvider::morphMap()`. Morph maps are enforced globally.
 
 ## Guidelines
 
@@ -78,27 +79,37 @@ See the complete approved model at [docs/data-model.md](../../../docs/data-model
 
 - Data objects should be created in the `Data` folder.
 - Data objects should be named like `[DataObjectName]Data`, e.g. `CareerApplicationData`.
-- Data objects should extend the `Spatie\LaravelData\Data` class.
-- Data objects should be serializable.
-- Use `snake_case` for data object property names (e.g. `first_name`, `client_secret`, `stripe_publishable_key`) to match the convention used throughout the project (`ContactData`, `BidData`, etc.) and to line up with the underlying column/API names.
+- Validated input Data objects should extend `Spatie\LaravelData\Data`; response-only Data objects should extend `Spatie\LaravelData\Resource`.
 - DO NOT EVER pass request objects to actions — extract the plain values the action needs and pass those.
-- Generate TypeScript definitions from the data objects by running the `php artisan typescript:transform` command.
-- Use the generated types in the front-end.
-- **Call sites use `::from($source)` uniformly.** Spatie routes `Data::from($source)` to a typed factory like `from{ClassName}` based on the parameter type, so define the factory inside the Data class — don't expose it as a separate public name to callers.
+- Use `::from($source)` when transforming a request, model, or other source object. Use the constructor when composing explicit application values.
 
 ### Others
 
-* Controllers in `app/Http/Controllers/Api/V1/` are thin: validate via Data, delegate to Action, return Data. GET endpoints use Spatie Query Builder directly — no Action needed for reads.
+* Controllers in `app/Http/Controllers/Api/V1/` are thin: validate via Data, delegate to Action, and return Data. GET endpoints use Spatie Query Builder directly with explicit `allowedFilters`, `allowedIncludes`, `allowedSorts`, and `allowedFields`; no Action is needed for reads.
+
+### Pre-commit Checks
+
+- The versioned hook at `.githooks/pre-commit` runs Composer validation, regenerates and verifies the OpenAPI contract, and runs `composer run ci:check` before every commit.
+- Composer automatically configures the repository-local hook path after dependency installation. Run `composer run hooks:install` from `backend` to configure it manually.
+- Do not bypass the hook. Fix the failing check or stage the regenerated `backend/openapi/v1.json` when the API contract changes.
+
+### Testing
+
+- Prefer full integration tests over isolated unit tests. A feature test should exercise the complete HTTP flow: route, middleware, request Data validation, authorization, controller, database writes, response Data transformation, and OpenAPI contract.
+- Unit tests are appropriate for deterministic, framework-independent business rules such as draw algorithms, value objects, and complex transformations.
+- API feature tests belong in `tests/Feature/Api` and extend `Tests\\ApiTestCase`. Web feature tests belong in `tests/Feature/Web` and extend `Tests\\TestCase`.
+- Do not skip OpenAPI validation in API tests unless the test deliberately crosses a schema boundary, such as submitting an invalid payload to test validation, or exercises an undocumented or in-progress contract. Skip only the necessary direction—request or response—and document why in the test.
+- Add a Pest architecture test for each durable structural rule. Architecture tests should protect boundaries such as final API classes, Spatie Data-only payloads, absent Laravel HTTP resources, and future Action or integration conventions.
 
 ### External API Integrations
 
-- All external integrations must be done by having a read implementation, and a fake implementation.
+- All external integrations must have a real implementation and a fake implementation.
 - All external integrations must implement a common interface for the integration itself.
 - Integration implementations must return a common data object for the integration itself.
 - Integrations should be created in the `Services` folder, and a subfolder for the integration itself.
 - Integration implementations should be named like `[IntegrationName]Integration`, e.g. `LeadsIntegration`.
 - In the service provider, map the interface to the real implementation.
-- When running tests, always use the fake implementation.
+- Tests use the fake implementation by default. Add focused contract tests for each real adapter.
 
 === foundation rules ===
 
