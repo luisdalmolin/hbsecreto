@@ -1,7 +1,7 @@
 {
     "openapi": "3.1.0",
     "info": {
-        "title": "Hey Brother Secreto API",
+        "title": "CPX Secreto API",
         "version": "v1"
     },
     "paths": {

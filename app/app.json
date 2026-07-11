@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Hey Brother Secreto",
-    "slug": "hey-brother-secreto",
+    "name": "CPX Secreto",
+    "slug": "cpx-secreto",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "heybrothersecreto",
+    "scheme": "cpxsecreto",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"

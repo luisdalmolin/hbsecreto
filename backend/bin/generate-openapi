@@ -6,4 +6,4 @@ cd "$(dirname "$0")/.."
 
 mkdir -p openapi
 
-exec vendor/bin/openapi app --version 3.1.0 --format json --output openapi/v1.json
+exec php -d opcache.enable_cli=0 vendor/bin/openapi app --version 3.1.0 --format json --output openapi/v1.json

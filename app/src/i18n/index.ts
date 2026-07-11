@@ -6,7 +6,7 @@ const resources = {
   'pt-BR': {
     translation: {
       home: {
-        title: 'Hey Brother Secreto',
+        title: 'CPX Secreto',
         description: 'Organize seus amigos secretos de um jeito simples e especial.',
         apiStatus: 'A conexão com a API estará disponível em breve.',
       },

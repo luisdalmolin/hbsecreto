@@ -1,4 +1,4 @@
-# Data Model — Hey Brother Secreto
+# Data Model — CPX Secreto
 
 **Status:** Approved design · 2026-07-11
 **Scope:** Core data model for groups, editions, draws, wishes, chat, and monetization hooks. Backend is Laravel (SQLite in dev); IDs are big-integer auto-increment; all tables have `created_at`/`updated_at` unless noted.

@@ -8,7 +8,7 @@ use OpenApi\Attributes as OA;
 #[OA\OpenApi(
     openapi: OpenApiDocument::VERSION_3_1_0,
     info: new OA\Info(
-        title: 'Hey Brother Secreto API',
+        title: 'CPX Secreto API',
         version: 'v1',
     ),
 )]

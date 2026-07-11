@@ -13,7 +13,7 @@ test('generates a valid OpenAPI 3.1 document with bearer authentication', functi
     expect($openApi->validate(version: OpenApiDocument::VERSION_3_1_0))->toBeTrue()
         ->and($document['openapi'])->toBe(OpenApiDocument::VERSION_3_1_0)
         ->and($document['info'])->toMatchArray([
-            'title' => 'Hey Brother Secreto API',
+            'title' => 'CPX Secreto API',
             'version' => 'v1',
         ])
         ->and($document['components']['securitySchemes']['bearerAuth'])->toMatchArray([

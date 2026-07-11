@@ -1,4 +1,4 @@
-# Hey Brother Secreto app
+# CPX Secreto app
 
 Universal Expo application for iOS, Android, and web. It uses Expo Router, strict TypeScript, and Brazilian Portuguese as its default language.
 

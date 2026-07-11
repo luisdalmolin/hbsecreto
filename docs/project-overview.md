@@ -1,6 +1,6 @@
-# Project Overview — Hey Brother Secreto
+# Project Overview — CPX Secreto
 
-Hey Brother Secreto is a mobile-first Secret Santa (`Amigo Secreto`) platform for organizing groups, running recurring gift-exchange editions, and keeping the draw experience private until reveal time.
+CPX Secreto is a mobile-first Secret Santa (`Amigo Secreto`) platform for organizing groups, running recurring gift-exchange editions, and keeping the draw experience private until reveal time.
 
 The project is organized as a monorepo. The Laravel backend is the system of record and exposes a versioned HTTP API intended for the Expo React Native application.
 

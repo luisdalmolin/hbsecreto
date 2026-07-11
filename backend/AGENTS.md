@@ -1,7 +1,7 @@
 <laravel-boost-guidelines>
 === .ai/general rules ===
 
-# Hey Brother Secreto
+# CPX Secreto
 
 For a project overview, see [docs/project-overview.md](../../../docs/project-overview.md).
 

@@ -1,4 +1,4 @@
-# Hey Brother Secreto
+# CPX Secreto
 
 Secret Santa (Amigo Secreto) monorepo with the Laravel backend at (`backend`) and the Expo React Native mobile app at (`app`).
 
