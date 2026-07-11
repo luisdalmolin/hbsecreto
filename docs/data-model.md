@@ -23,7 +23,7 @@ erDiagram
     conversations ||--o{ messages : ""
     conversations ||--o{ conversation_reads : ""
     assignments |o--|| conversations : "assignment thread"
-    orders |o--o{ draw_constraints : "pay-to-pick"
+    orders |o--o| draw_constraints : "pay-to-pick"
     users ||--o{ orders : "buyer"
 ```
 
@@ -138,7 +138,7 @@ Rules the algorithm must honor, scoped to an edition.
 | `giver_edition_participant_id` | FK → edition_participants | for `must_not_pair`, "participant A" |
 | `receiver_edition_participant_id` | FK → edition_participants | for `must_not_pair`, "participant B" |
 | `source` | enum `admin` \| `purchase` | |
-| `order_id` | FK → orders, nullable | set when `source = purchase` |
+| `order_id` | FK → orders, nullable, unique | set when `source = purchase`; one order backs exactly one constraint |
 | `created_by` | FK → users, nullable | the admin, when `source = admin` |
 
 **Pay-to-pick is a paid `must_pair` constraint:** it participates in the draw only while its order is `paid`. No future schema change needed to ship the feature.
