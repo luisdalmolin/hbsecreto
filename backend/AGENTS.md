@@ -62,6 +62,43 @@ See the complete approved model at [docs/data-model.md](../../../docs/data-model
 - **No PHPStan baselines or inline ignores.** Level 10 errors must be fixed.
 - **No multi-line commit messages, no `Co-Authored-By` trailers.**
 - **No hardcoded `Storage::disk('name')` or `Storage::fake('name')` in app/test code.** Use the default disk (call `Storage::` facade methods directly, `Storage::fake()` without args). If a non-default disk is genuinely needed, resolve its name from config (`config('filesystems.<key>')`) so environments can swap it — never inline the disk name.
+- **Morph-maps**: Every model using polymorphic relationships, needs to be declared in a morph map so we detach the code from the data as much as we can.
+
+## Guidelines
+
+### Actions
+
+- Encapsulate any piece of business logic into their own dedicated Action classes, inside the `Actions` folder.
+- Actions should be implemented using the `handle` method.
+- Name actions for what they do, with no `Action` suffix (e.g. `ProcessInsight`, `RegisterBuyerForAuction`).
+- Actions should be reusable across contexts (http, artisan, queue, etc.).
+- **Boundary between model methods and actions.** The line is *orchestration*, not "does it write the DB". Keep these on the model: typed reads of own state (e.g. `$auction->isAdvertisementEnabledForSlot($slot)`, `$user->hasSavedPaymentMethod()`) and single-statement writes against own columns with no events or transactions (e.g. `$auction->bindAdvertisementToSlot($slot, $ad)` whose body is one `update()` call). Lift to an Action when the work involves: multiple writes coordinated by a transaction, side effects beyond the DB (events, notifications, jobs, integrations), branchy business policy worth unit-testing in isolation, or reuse across HTTP/console/queue. Smell to watch for both ways — an Action whose entire body is `Model::update([...])` is a model method in disguise; a model method that touches other models, dispatches events, or wraps a transaction has outgrown the model and should be extracted into an Action.
+
+### Data Objects
+
+- Data objects should be created in the `Data` folder.
+- Data objects should be named like `[DataObjectName]Data`, e.g. `CareerApplicationData`.
+- Data objects should extend the `Spatie\LaravelData\Data` class.
+- Data objects should be serializable.
+- Use `snake_case` for data object property names (e.g. `first_name`, `client_secret`, `stripe_publishable_key`) to match the convention used throughout the project (`ContactData`, `BidData`, etc.) and to line up with the underlying column/API names.
+- DO NOT EVER pass request objects to actions — extract the plain values the action needs and pass those.
+- Generate TypeScript definitions from the data objects by running the `php artisan typescript:transform` command.
+- Use the generated types in the front-end.
+- **Call sites use `::from($source)` uniformly.** Spatie routes `Data::from($source)` to a typed factory like `from{ClassName}` based on the parameter type, so define the factory inside the Data class — don't expose it as a separate public name to callers.
+
+### Others
+
+* Controllers in `app/Http/Controllers/Api/V1/` are thin: validate via Data, delegate to Action, return Data. GET endpoints use Spatie Query Builder directly — no Action needed for reads.
+
+### External API Integrations
+
+- All external integrations must be done by having a read implementation, and a fake implementation.
+- All external integrations must implement a common interface for the integration itself.
+- Integration implementations must return a common data object for the integration itself.
+- Integrations should be created in the `Services` folder, and a subfolder for the integration itself.
+- Integration implementations should be named like `[IntegrationName]Integration`, e.g. `LeadsIntegration`.
+- In the service provider, map the interface to the real implementation.
+- When running tests, always use the fake implementation.
 
 === foundation rules ===
 

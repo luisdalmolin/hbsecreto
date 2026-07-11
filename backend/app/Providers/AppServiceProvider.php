@@ -2,8 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +29,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->configureMorphMap();
         $this->configureDefaults();
 
         RateLimiter::for('login', fn (Request $request): Limit => Limit::perMinute(5)->by($request->ip()));
@@ -51,5 +55,22 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null,
         );
+    }
+
+    /**
+     * Require explicit aliases before polymorphic relations persist model names.
+     *
+     * @return array<string, class-string<Model>>
+     */
+    protected function morphMap(): array
+    {
+        return [
+            'user' => User::class,
+        ];
+    }
+
+    protected function configureMorphMap(): void
+    {
+        Relation::enforceMorphMap($this->morphMap());
     }
 }

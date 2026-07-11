@@ -53,12 +53,12 @@ composer run openapi:generate
 
 | Area | Technology |
 | --- | --- |
-| Language | PHP 8.3+ |
+| Language | PHP 8.5 |
 | Framework | Laravel 13 |
 | API authentication | Laravel Sanctum personal access tokens |
 | API data objects | Spatie Laravel Data 4 |
 | API specification | OpenAPI 3.1 generated with swagger-php 6 |
-| Development database | SQLite |
+| Application database | PostgreSQL |
 | Queues and cache | Laravel database drivers by default |
 | Localization | Laravel translations, with `pt_BR` as the default locale |
 
@@ -70,6 +70,7 @@ composer run openapi:generate
 | Static analysis | Larastan / PHPStan |
 | Formatting | Laravel Pint |
 | Contract verification | OpenAPI generation test plus the committed OpenAPI artifact |
+| Test database | SQLite in memory |
 
 ### Client and Existing Web Scaffold
 

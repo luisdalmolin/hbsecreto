@@ -9,13 +9,14 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "8.5",
+        "php": "^8.5",
         "inertiajs/inertia-laravel": "^3.0",
         "laravel/framework": "^13.17",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
         "spatie/laravel-data": "^4.23",
+        "spatie/laravel-query-builder": "^7.3",
         "zircote/swagger-php": "^6.3"
     },
     "require-dev": {
