@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Auth\RegisterUser;
 use App\Data\Api\V1\Auth\AuthenticationData;
 use App\Data\Api\V1\Auth\LoginData;
+use App\Data\Api\V1\Auth\RegisterData;
 use App\Data\Api\V1\Auth\UserData;
 use App\Http\Controllers\Controller;
 use App\Models\User;
@@ -16,6 +18,39 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Authentication')]
 final class AuthController extends Controller
 {
+    #[OA\Post(
+        path: '/api/v1/auth/register',
+        operationId: 'register',
+        tags: ['Authentication'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(ref: '#/components/schemas/RegisterRequest'),
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Registered and authenticated successfully.',
+                content: new OA\JsonContent(ref: '#/components/schemas/Authentication'),
+            ),
+            new OA\Response(
+                response: 422,
+                description: 'The request payload is invalid.',
+                content: new OA\JsonContent(ref: '#/components/schemas/Error'),
+            ),
+            new OA\Response(response: 429, description: 'Too many registration attempts.'),
+        ],
+    )]
+    public function register(RegisterData $registerData, RegisterUser $registerUser): AuthenticationData
+    {
+        $user = $registerUser->handle($registerData);
+
+        return new AuthenticationData(
+            accessToken: $user->createToken($registerData->deviceName)->plainTextToken,
+            tokenType: 'Bearer',
+            user: UserData::from($user),
+        );
+    }
+
     #[OA\Post(
         path: '/api/v1/auth/login',
         operationId: 'login',

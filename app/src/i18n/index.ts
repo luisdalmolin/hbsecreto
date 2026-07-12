@@ -39,6 +39,29 @@ const resources = {
           profile: 'Suas informações e preferências vão aparecer aqui.',
         },
       },
+      auth: {
+        brand: 'CPX Secreto',
+        fields: {
+          name: 'Seu nome',
+          email: 'E-mail',
+          password: 'Senha',
+        },
+        error: {
+          generic: 'Não foi possível concluir a autenticação. Tente novamente.',
+        },
+        signIn: {
+          title: 'Entrar',
+          subtitle: 'Entre para organizar seus amigos secretos.',
+          submit: 'Entrar',
+          alternate: 'Ainda não tenho uma conta',
+        },
+        signUp: {
+          title: 'Criar conta',
+          subtitle: 'Crie sua conta para começar a celebrar.',
+          submit: 'Criar conta',
+          alternate: 'Já tenho uma conta',
+        },
+      },
     },
   },
 } as const;

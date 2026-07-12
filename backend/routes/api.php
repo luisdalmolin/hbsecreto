@@ -7,6 +7,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::post('auth/login', [AuthController::class, 'login'])
         ->middleware('throttle:login')
         ->name('auth.login');
+    Route::post('auth/register', [AuthController::class, 'register'])
+        ->middleware('throttle:register')
+        ->name('auth.register');
 
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');

@@ -1,0 +1,10 @@
+name: hbsecreto
+icon: null
+processes:
+  'App: Run web':
+    command: cd app && npm run start
+    working_dir: /Users/luisdalmolin/Projects/personal/hbsecreto/app
+    auto_start: true
+    auto_restart: false
+    restart_when_changed: []
+    env: {}
