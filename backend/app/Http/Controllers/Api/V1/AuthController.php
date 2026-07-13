@@ -6,6 +6,7 @@ use App\Actions\Auth\RegisterUser;
 use App\Data\Api\V1\Auth\AuthenticationData;
 use App\Data\Api\V1\Auth\LoginData;
 use App\Data\Api\V1\Auth\RegisterData;
+use App\Data\Api\V1\Auth\UpdateUserData;
 use App\Data\Api\V1\Auth\UserData;
 use App\Http\Controllers\Controller;
 use App\Models\User;
@@ -14,6 +15,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use OpenApi\Attributes as OA;
+use Spatie\LaravelData\Optional;
 
 #[OA\Tag(name: 'Authentication')]
 final class AuthController extends Controller
@@ -137,5 +139,36 @@ final class AuthController extends Controller
         $user = $request->user();
 
         return UserData::from($user);
+    }
+
+    #[OA\Patch(
+        path: '/api/v1/me',
+        operationId: 'updateCurrentUser',
+        tags: ['Authentication'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/UpdateUserRequest')),
+        responses: [
+            new OA\Response(response: 200, description: 'The updated authenticated user.', content: new OA\JsonContent(ref: '#/components/schemas/User')),
+            new OA\Response(response: 401, description: 'Authentication is required.', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
+            new OA\Response(response: 422, description: 'The request payload is invalid.', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
+        ],
+    )]
+    public function updateMe(UpdateUserData $data, Request $request): UserData
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $changes = [];
+
+        if (! $data->name instanceof Optional) {
+            $changes['name'] = $data->name;
+        }
+
+        if (! $data->locale instanceof Optional) {
+            $changes['locale'] = $data->locale;
+        }
+
+        $user->update($changes);
+
+        return UserData::from($user->refresh());
     }
 }

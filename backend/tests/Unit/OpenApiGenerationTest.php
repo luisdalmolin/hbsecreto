@@ -25,11 +25,67 @@ test('generates a valid OpenAPI 3.1 document with bearer authentication', functi
             '/api/v1/auth/login',
             '/api/v1/auth/logout',
             '/api/v1/me',
+            '/api/v1/groups',
+            '/api/v1/groups/{group}',
+            '/api/v1/groups/{group}/members',
+            '/api/v1/groups/{group}/members/{member}',
+            '/api/v1/groups/{group}/members/{member}/invite',
+            '/api/v1/invitations/{token}',
+            '/api/v1/invitations/{token}/claim',
+            '/api/v1/groups/{group}/editions',
+            '/api/v1/groups/{group}/editions/{edition}',
+            '/api/v1/groups/{group}/editions/{edition}/participants',
+            '/api/v1/groups/{group}/editions/{edition}/open',
+            '/api/v1/groups/{group}/editions/{edition}/reveal',
+            '/api/v1/groups/{group}/editions/{edition}/archive',
+            '/api/v1/groups/{group}/editions/{edition}/draw-constraints',
+            '/api/v1/groups/{group}/editions/{edition}/draw-constraints/{drawConstraint}',
+            '/api/v1/groups/{group}/editions/{edition}/draw/preflight',
+            '/api/v1/groups/{group}/editions/{edition}/draw',
+            '/api/v1/groups/{group}/editions/{edition}/my-assignment',
+            '/api/v1/groups/{group}/editions/{edition}/assignments',
         ])
         ->and($document['components']['schemas'])->toHaveKeys([
             'Authentication',
             'Error',
             'LoginRequest',
             'User',
+            'UpdateUserRequest',
+            'Group',
+            'GroupCollection',
+            'GroupMember',
+            'IssuedInvitation',
+            'InvitationPreview',
+            'Edition',
+            'EditionCollection',
+            'EditionParticipant',
+            'PaginationMeta',
+            'CreateDrawConstraintRequest',
+            'DrawConstraint',
+            'DrawConstraintCollection',
+            'DrawPreflight',
+            'DrawReceipt',
+            'AssignmentParticipant',
+            'MyAssignment',
+            'Assignment',
+            'AssignmentCollection',
+        ])
+        ->and($document['components']['schemas']['Edition']['properties']['eventDate'])->toMatchArray([
+            'oneOf' => [
+                ['type' => 'string', 'format' => 'date'],
+                ['type' => 'null'],
+            ],
+        ])
+        ->and($document['components']['schemas']['Edition']['properties']['drawnAt'])->toMatchArray([
+            'oneOf' => [
+                ['type' => 'string', 'format' => 'date-time'],
+                ['type' => 'null'],
+            ],
+        ])
+        ->and($document['components']['schemas']['Edition']['properties']['revealedAt'])->toMatchArray([
+            'oneOf' => [
+                ['type' => 'string', 'format' => 'date-time'],
+                ['type' => 'null'],
+            ],
         ]);
 });

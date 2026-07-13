@@ -1,50 +1,46 @@
-import { cva, type VariantProps } from 'class-variance-authority';
-import { forwardRef, type ReactNode } from 'react';
-import { Pressable, type PressableProps, View } from 'react-native';
+import { cva, type VariantProps } from "class-variance-authority";
+import { forwardRef, type ReactNode } from "react";
+import { Pressable, type PressableProps, View } from "react-native";
 
-import { cn } from '@/lib/utils';
-import { palette } from '@/theme/tokens';
+import { cn } from "@/lib/utils";
 
-import { Text } from './text';
+import { Text } from "./text";
 
-const buttonVariants = cva('flex-row items-center justify-center rounded-full active:opacity-85', {
+const buttonVariants = cva(
+  "min-h-11 flex-row items-center justify-center rounded-full active:opacity-85",
+  {
+    variants: {
+      variant: {
+        primary: "bg-mint",
+        pink: "bg-pink",
+        light: "bg-card",
+      },
+      size: {
+        sm: "gap-1.5 px-[15px] py-[9px]",
+        md: "gap-1.5 px-4 py-[10px]",
+      },
+    },
+    defaultVariants: { variant: "primary", size: "md" },
+  },
+);
+
+const buttonTextVariants = cva("font-display-x", {
   variants: {
     variant: {
-      primary: 'bg-mint',
-      pink: 'bg-pink',
-      light: 'bg-card',
+      primary: "text-white",
+      pink: "text-white",
+      light: "text-mint-deep",
     },
     size: {
-      sm: 'gap-1.5 px-[15px] py-[9px]',
-      md: 'gap-1.5 px-4 py-[10px]',
+      sm: "text-[13px] leading-[16px]",
+      md: "text-[14px] leading-[18px]",
     },
   },
-  defaultVariants: { variant: 'primary', size: 'md' },
+  defaultVariants: { variant: "primary", size: "md" },
 });
 
-const buttonTextVariants = cva('font-display-x', {
-  variants: {
-    variant: {
-      primary: 'text-white',
-      pink: 'text-white',
-      light: 'text-mint-deep',
-    },
-    size: {
-      sm: 'text-[13px] leading-[16px]',
-      md: 'text-[14px] leading-[18px]',
-    },
-  },
-  defaultVariants: { variant: 'primary', size: 'md' },
-});
-
-/** Foreground color per variant — pass to icon props so icons match the label. */
-export const buttonForeground = {
-  primary: palette.white,
-  pink: palette.white,
-  light: palette.mintDeep,
-} as const;
-
-export interface ButtonProps extends PressableProps, VariantProps<typeof buttonVariants> {
+export interface ButtonProps
+  extends PressableProps, VariantProps<typeof buttonVariants> {
   label: string;
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;

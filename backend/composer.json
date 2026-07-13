@@ -65,7 +65,7 @@
             "pint --parallel --test"
         ],
         "hooks:install": "sh bin/install-git-hooks",
-        "openapi:generate": "@php bin/generate-openapi",
+        "openapi:generate": "sh bin/generate-openapi",
         "ci:check": [
             "Composer\\Config::disableProcessTimeout",
             "npm run lint:check",

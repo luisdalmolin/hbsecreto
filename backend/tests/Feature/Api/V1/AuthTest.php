@@ -114,3 +114,26 @@ test('protected endpoints return a localized unauthenticated response', function
         ->assertUnauthorized()
         ->assertJsonPath('message', 'Não autenticado.');
 });
+
+test('an authenticated user can update only their localized profile fields', function (): void {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->patchJson('/api/v1/me', [
+            'name' => 'Ana Atualizada',
+            'locale' => 'pt-BR',
+            'email' => 'ignored@example.com',
+        ])
+        ->assertOk()
+        ->assertJsonPath('name', 'Ana Atualizada')
+        ->assertJsonPath('locale', 'pt-BR')
+        ->assertJsonPath('email', $user->email);
+
+    expect($user->refresh()->name)->toBe('Ana Atualizada')
+        ->and($user->email)->not->toBe('ignored@example.com');
+});
+
+test('canonical user locales map to Laravel translation directories', function (): void {
+    expect(User::factory()->make(['locale' => 'pt-BR'])->laravelLocale())->toBe('pt_BR')
+        ->and(User::factory()->make(['locale' => 'unsupported'])->laravelLocale())->toBe('pt_BR');
+});

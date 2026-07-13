@@ -1,4 +1,5 @@
 let accessToken: string | undefined;
+let unauthorizedHandler: (() => void | Promise<void>) | undefined;
 
 export class ApiError extends Error {
   constructor(
@@ -6,7 +7,7 @@ export class ApiError extends Error {
     public readonly payload: unknown,
   ) {
     super(getErrorMessage(payload));
-    this.name = 'ApiError';
+    this.name = "ApiError";
   }
 }
 
@@ -14,18 +15,34 @@ export function configureApiClient(token?: string): void {
   accessToken = token;
 }
 
-export async function apiFetch<T>(path: string, options: RequestInit): Promise<T> {
+export function configureUnauthorizedHandler(
+  handler?: () => void | Promise<void>,
+): void {
+  unauthorizedHandler = handler;
+}
+
+export async function apiFetch<T>(
+  path: string,
+  options: RequestInit,
+): Promise<T> {
   const headers = new Headers(options.headers);
-  headers.set('Accept', 'application/json');
+  headers.set("Accept", "application/json");
 
   if (accessToken) {
-    headers.set('Authorization', `Bearer ${accessToken}`);
+    headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
-  const response = await fetch(`${getApiBaseUrl()}${path}`, { ...options, headers });
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
+    ...options,
+    headers,
+  });
   const payload = await readPayload(response);
 
   if (!response.ok) {
+    if (response.status === 401 && accessToken && unauthorizedHandler) {
+      await unauthorizedHandler();
+    }
+
     throw new ApiError(response.status, payload);
   }
 
@@ -36,10 +53,12 @@ function getApiBaseUrl(): string {
   const url = process.env.EXPO_PUBLIC_API_URL;
 
   if (!url) {
-    throw new Error('EXPO_PUBLIC_API_URL must be configured before making API requests.');
+    throw new Error(
+      "EXPO_PUBLIC_API_URL must be configured before making API requests.",
+    );
   }
 
-  return url.replace(/\/$/, '');
+  return url.replace(/\/$/, "");
 }
 
 async function readPayload(response: Response): Promise<unknown> {
@@ -47,19 +66,21 @@ async function readPayload(response: Response): Promise<unknown> {
     return undefined;
   }
 
-  const contentType = response.headers.get('content-type') ?? '';
-  return contentType.includes('application/json') ? response.json() : response.text();
+  const contentType = response.headers.get("content-type") ?? "";
+  return contentType.includes("application/json")
+    ? response.json()
+    : response.text();
 }
 
 function getErrorMessage(payload: unknown): string {
   if (
-    typeof payload === 'object' &&
+    typeof payload === "object" &&
     payload !== null &&
-    'message' in payload &&
-    typeof payload.message === 'string'
+    "message" in payload &&
+    typeof payload.message === "string"
   ) {
     return payload.message;
   }
 
-  return 'The API request failed.';
+  return "The API request failed.";
 }
