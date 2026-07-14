@@ -44,6 +44,9 @@ test('generates a valid OpenAPI 3.1 document with bearer authentication', functi
             '/api/v1/groups/{group}/editions/{edition}/draw',
             '/api/v1/groups/{group}/editions/{edition}/my-assignment',
             '/api/v1/groups/{group}/editions/{edition}/assignments',
+            '/api/v1/groups/{group}/editions/{edition}/my-wishes',
+            '/api/v1/groups/{group}/editions/{edition}/my-wishes/order',
+            '/api/v1/groups/{group}/editions/{edition}/my-wishes/{wish}',
         ])
         ->and($document['components']['schemas'])->toHaveKeys([
             'Authentication',
@@ -59,6 +62,7 @@ test('generates a valid OpenAPI 3.1 document with bearer authentication', functi
             'Edition',
             'EditionCollection',
             'EditionParticipant',
+            'EditionParticipantCollection',
             'PaginationMeta',
             'CreateDrawConstraintRequest',
             'DrawConstraint',
@@ -69,6 +73,11 @@ test('generates a valid OpenAPI 3.1 document with bearer authentication', functi
             'MyAssignment',
             'Assignment',
             'AssignmentCollection',
+            'CreateWishRequest',
+            'UpdateWishRequest',
+            'ReorderWishesRequest',
+            'Wish',
+            'WishCollection',
         ])
         ->and($document['components']['schemas']['Edition']['properties']['eventDate'])->toMatchArray([
             'oneOf' => [
@@ -85,6 +94,13 @@ test('generates a valid OpenAPI 3.1 document with bearer authentication', functi
         ->and($document['components']['schemas']['Edition']['properties']['revealedAt'])->toMatchArray([
             'oneOf' => [
                 ['type' => 'string', 'format' => 'date-time'],
+                ['type' => 'null'],
+            ],
+        ])
+        ->and($document['components']['schemas']['EditionParticipantCollection']['required'])->toContain('currentParticipantId')
+        ->and($document['components']['schemas']['EditionParticipantCollection']['properties']['currentParticipantId'])->toMatchArray([
+            'oneOf' => [
+                ['type' => 'integer'],
                 ['type' => 'null'],
             ],
         ]);

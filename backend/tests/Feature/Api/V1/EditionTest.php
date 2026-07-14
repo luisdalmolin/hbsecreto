@@ -55,9 +55,41 @@ test('edition and participant lists are scoped to the selected tenant', function
     $this->getJson("/api/v1/groups/{$this->group->id}/editions/{$edition->id}/participants")
         ->assertOk()
         ->assertJsonCount(1, 'data')
-        ->assertJsonPath('data.0.id', $participant->id);
+        ->assertJsonPath('data.0.id', $participant->id)
+        ->assertJsonPath('currentParticipantId', $participant->id);
 
     $this->getJson("/api/v1/groups/{$this->group->id}/editions/{$hiddenEdition->id}")->assertNotFound();
+});
+
+test('the current participant identifier is independent of the roster page', function (): void {
+    $viewer = User::factory()->create();
+    $viewerMember = GroupMember::factory()->for($this->group)->active($viewer)->create();
+    $edition = Edition::factory()->for($this->group)->create(['created_by' => $this->admin->id]);
+
+    foreach (range(1, 15) as $position) {
+        $member = GroupMember::factory()->for($this->group)->active()->create();
+        EditionParticipant::factory()->for($edition)->create([
+            'group_id' => $this->group->id,
+            'group_member_id' => $member->id,
+            'created_at' => now()->subMinutes(30 - $position),
+        ]);
+    }
+
+    $viewerParticipant = EditionParticipant::factory()->for($edition)->create([
+        'group_id' => $this->group->id,
+        'group_member_id' => $viewerMember->id,
+        'created_at' => now(),
+    ]);
+    Sanctum::actingAs($viewer);
+
+    $response = $this->getJson("/api/v1/groups/{$this->group->id}/editions/{$edition->id}/participants")
+        ->assertOk()
+        ->assertJsonCount(15, 'data')
+        ->assertJsonPath('currentParticipantId', $viewerParticipant->id)
+        ->assertJsonPath('meta.currentPage', 1)
+        ->assertJsonPath('meta.lastPage', 2);
+
+    expect($response->json('data.*.id'))->not->toContain($viewerParticipant->id);
 });
 
 test('an invited placeholder can join and two participants can open an edition', function (): void {

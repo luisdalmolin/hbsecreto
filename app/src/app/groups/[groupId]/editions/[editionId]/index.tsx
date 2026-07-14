@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { Eye, Gift, List, Shuffle, Users } from "lucide-react-native";
+import { Eye, Gift, Heart, List, Shuffle, Users } from "lucide-react-native";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, View } from "react-native";
@@ -48,7 +48,7 @@ export default function EditionDetailScreen() {
     return {
       group,
       edition,
-      participants: participants.data,
+      participants,
       members: members.data,
     };
   };
@@ -62,6 +62,9 @@ export default function EditionDetailScreen() {
         member.role === "admin" &&
         member.status === "active",
     ),
+  );
+  const isParticipant = Boolean(
+    resource.data?.participants.currentParticipantId,
   );
 
   async function run(action: () => Promise<Edition>): Promise<void> {
@@ -166,7 +169,7 @@ export default function EditionDetailScreen() {
           <View className="flex-1">
             <Text variant="cardTitle">{t("editions.roster")}</Text>
             <Text variant="caption">
-              {t("editions.rosterCount", { count: participants.length })}
+              {t("editions.rosterCount", { count: participants.meta.total })}
             </Text>
           </View>
         </View>
@@ -183,6 +186,29 @@ export default function EditionDetailScreen() {
           />
         ) : null}
       </Card>
+
+      {isParticipant ? (
+        <Card className="gap-3 p-5">
+          <View className="flex-row items-center gap-3">
+            <Heart color={palette.pink} size={22} />
+            <View className="flex-1">
+              <Text variant="cardTitle">{t("wishes.title")}</Text>
+              <Text variant="caption">{t("wishes.editionHint")}</Text>
+            </View>
+          </View>
+          <Button
+            label={t("wishes.openMine")}
+            variant="light"
+            leftIcon={<List color={palette.mintDeep} size={18} />}
+            onPress={() =>
+              router.push({
+                pathname: "/groups/[groupId]/editions/[editionId]/wishes",
+                params: routeParams,
+              })
+            }
+          />
+        </Card>
+      ) : null}
 
       {(edition.status === "draft" || edition.status === "open") && isAdmin ? (
         <Card className="gap-3 p-5">

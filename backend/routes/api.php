@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\EditionParticipantController;
 use App\Http\Controllers\Api\V1\GroupController;
 use App\Http\Controllers\Api\V1\GroupMemberController;
 use App\Http\Controllers\Api\V1\InvitationController;
+use App\Http\Controllers\Api\V1\WishController;
 use App\Http\Middleware\SetUserLocale;
 use Illuminate\Support\Facades\Route;
 
@@ -63,6 +64,11 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('groups/{group}/editions/{edition}/draw', [DrawController::class, 'store'])->name('groups.editions.draw.store');
             Route::get('groups/{group}/editions/{edition}/my-assignment', [AssignmentController::class, 'mine'])->name('groups.editions.my_assignment.show');
             Route::get('groups/{group}/editions/{edition}/assignments', [AssignmentController::class, 'index'])->name('groups.editions.assignments.index');
+            Route::get('groups/{group}/editions/{edition}/my-wishes', [WishController::class, 'index'])->name('groups.editions.my_wishes.index');
+            Route::post('groups/{group}/editions/{edition}/my-wishes', [WishController::class, 'store'])->name('groups.editions.my_wishes.store');
+            Route::put('groups/{group}/editions/{edition}/my-wishes/order', [WishController::class, 'reorder'])->name('groups.editions.my_wishes.reorder');
+            Route::patch('groups/{group}/editions/{edition}/my-wishes/{wish}', [WishController::class, 'update'])->name('groups.editions.my_wishes.update');
+            Route::delete('groups/{group}/editions/{edition}/my-wishes/{wish}', [WishController::class, 'destroy'])->name('groups.editions.my_wishes.destroy');
         });
     });
 });

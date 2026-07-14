@@ -40,4 +40,9 @@ class EditionFactory extends Factory
     {
         return $this->state(fn (): array => ['status' => EditionStatus::Revealed, 'drawn_at' => now(), 'revealed_at' => now()]);
     }
+
+    public function archived(): static
+    {
+        return $this->state(fn (): array => ['status' => EditionStatus::Archived, 'drawn_at' => now(), 'revealed_at' => now()]);
+    }
 }

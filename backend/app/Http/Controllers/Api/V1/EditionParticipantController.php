@@ -46,6 +46,11 @@ final class EditionParticipantController extends Controller
             ->where('status', GroupMemberStatus::Active)
             ->where('role', GroupMemberRole::Admin)
             ->exists();
+        $currentParticipantId = $edition->participants()
+            ->whereHas('groupMember', fn ($members) => $members
+                ->whereBelongsTo($viewer)
+                ->where('status', GroupMemberStatus::Active))
+            ->value('id');
         $baseQuery = EditionParticipant::query()->whereBelongsTo($edition);
         $participants = QueryBuilder::for($baseQuery)
             ->allowedFilters()
@@ -75,6 +80,7 @@ final class EditionParticipantController extends Controller
         return new EditionParticipantCollectionData(
             $data,
             new PaginationMetaData($participants->currentPage(), $participants->lastPage(), $participants->perPage(), $participants->total()),
+            is_int($currentParticipantId) ? $currentParticipantId : null,
         );
     }
 

@@ -6,6 +6,7 @@ use App\Data\Api\V1\Draws\AssignmentCollectionData;
 use App\Data\Api\V1\Draws\AssignmentData;
 use App\Data\Api\V1\Draws\AssignmentParticipantData;
 use App\Data\Api\V1\Draws\MyAssignmentData;
+use App\Data\Api\V1\Wishes\WishData;
 use App\Draws\DrawConflictException;
 use App\Draws\DrawFailureCode;
 use App\Enums\EditionStatus;
@@ -48,7 +49,7 @@ final class AssignmentController extends Controller
         $assignment = Assignment::query()
             ->whereBelongsTo($edition)
             ->whereBelongsTo($giver, 'giver')
-            ->with('receiver.groupMember.user')
+            ->with(['receiver.groupMember.user', 'receiver.wishes'])
             ->firstOrFail();
         $receiver = $assignment->receiver;
 
@@ -56,7 +57,10 @@ final class AssignmentController extends Controller
             throw new DrawConflictException(DrawFailureCode::CorruptAssignments);
         }
 
-        return new MyAssignmentData(AssignmentParticipantData::fromParticipant($receiver));
+        /** @var DataCollection<int, WishData> $wishes */
+        $wishes = WishData::collect($receiver->wishes, DataCollection::class);
+
+        return new MyAssignmentData(AssignmentParticipantData::fromParticipant($receiver), $wishes);
     }
 
     #[Authorize('viewAssignments', 'edition')]

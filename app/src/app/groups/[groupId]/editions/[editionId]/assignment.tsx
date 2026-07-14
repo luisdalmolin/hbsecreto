@@ -1,12 +1,13 @@
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Eye, Gift } from "lucide-react-native";
-import { useCallback, useState } from "react";
+import { Eye, Gift, Heart } from "lucide-react-native";
+import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, View } from "react-native";
 
 import { getMyAssignment } from "@/api/generated/assignments/assignments";
 import type { MyAssignment } from "@/api/generated/models";
 import { AppScreen } from "@/components/common/app-screen";
+import { ScreenState } from "@/components/common/screen-state";
 import { Button, Card, Text } from "@/components/ui";
 import { apiErrorMessage, parseRouteId } from "@/features/shared/presentation";
 import { palette } from "@/theme/tokens";
@@ -19,29 +20,45 @@ export default function MyAssignmentScreen() {
   const [assignment, setAssignment] = useState<MyAssignment>();
   const [error, setError] = useState<unknown>();
   const [revealing, setRevealing] = useState(false);
+  const requestRef = useRef<AbortController | undefined>(undefined);
 
   useFocusEffect(
     useCallback(
       () => () => {
+        requestRef.current?.abort();
+        requestRef.current = undefined;
         setAssignment(undefined);
         setError(undefined);
+        setRevealing(false);
       },
       [],
     ),
   );
 
   async function reveal(): Promise<void> {
-    if (!groupId || !editionId || revealing) return;
+    if (!groupId || !editionId || requestRef.current) return;
+    const controller = new AbortController();
+    requestRef.current = controller;
     setError(undefined);
     setRevealing(true);
     try {
       // Privacy boundary: this is the only place that requests the receiver,
       // and it only runs after an explicit user gesture.
-      setAssignment(await getMyAssignment(groupId, editionId));
+      const result = await getMyAssignment(groupId, editionId, {
+        signal: controller.signal,
+      });
+      if (controller.signal.aborted || requestRef.current !== controller)
+        return;
+      setAssignment(result);
     } catch (exception) {
+      if (controller.signal.aborted || requestRef.current !== controller)
+        return;
       setError(exception);
     }
-    setRevealing(false);
+    if (requestRef.current === controller) {
+      requestRef.current = undefined;
+      setRevealing(false);
+    }
   }
 
   return (
@@ -105,6 +122,34 @@ export default function MyAssignmentScreen() {
           </Text>
         ) : null}
       </Card>
+      {assignment ? (
+        <>
+          <View className="flex-row items-center gap-2">
+            <Heart color={palette.pink} size={20} />
+            <Text variant="section">
+              {t("assignments.wishesTitle", {
+                name: assignment.receiver.displayName,
+              })}
+            </Text>
+          </View>
+          {assignment.wishes.length === 0 ? (
+            <ScreenState kind="empty" title={t("assignments.wishesEmpty")} />
+          ) : (
+            <View className="gap-3">
+              {assignment.wishes.map((wish, index) => (
+                <Card key={wish.id} className="flex-row items-start gap-3 p-4">
+                  <View className="h-7 w-7 items-center justify-center rounded-full bg-mint-tint">
+                    <Text variant="label" className="text-mint-deep">
+                      {index + 1}
+                    </Text>
+                  </View>
+                  <Text className="flex-1">{wish.description}</Text>
+                </Card>
+              ))}
+            </View>
+          )}
+        </>
+      ) : null}
     </AppScreen>
   );
 }

@@ -6,6 +6,7 @@ use App\Policies\EditionParticipantPolicy;
 use Database\Factories\EditionParticipantFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $edition_id
  * @property int $group_id
  * @property int $group_member_id
+ * @property-read Collection<int, Wish> $wishes
  */
 #[Fillable(['edition_id', 'group_id', 'group_member_id'])]
 #[UsePolicy(EditionParticipantPolicy::class)]
@@ -52,5 +54,11 @@ class EditionParticipant extends Model
     public function receivedAssignments(): HasMany
     {
         return $this->hasMany(Assignment::class, 'receiver_edition_participant_id');
+    }
+
+    /** @return HasMany<Wish, $this> */
+    public function wishes(): HasMany
+    {
+        return $this->hasMany(Wish::class)->orderBy('sort_order')->orderBy('id');
     }
 }

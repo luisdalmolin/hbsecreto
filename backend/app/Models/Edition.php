@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Carbon;
 
 /**
@@ -71,6 +72,12 @@ class Edition extends Model
     public function assignments(): HasMany
     {
         return $this->hasMany(Assignment::class);
+    }
+
+    /** @return HasManyThrough<Wish, EditionParticipant, $this> */
+    public function wishes(): HasManyThrough
+    {
+        return $this->hasManyThrough(Wish::class, EditionParticipant::class);
     }
 
     protected function casts(): array
