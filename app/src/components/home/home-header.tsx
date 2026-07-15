@@ -9,6 +9,7 @@ export interface HomeHeaderProps {
   name: string;
   initials: string;
   notificationsLabel: string;
+  notificationCount?: number;
   onPressNotifications?: () => void;
 }
 
@@ -18,6 +19,7 @@ export function HomeHeader({
   name,
   initials,
   notificationsLabel,
+  notificationCount = 0,
   onPressNotifications,
 }: HomeHeaderProps) {
   return (
@@ -36,6 +38,13 @@ export function HomeHeader({
         onPress={onPressNotifications}
       >
         <Bell color={palette.mint} size={20} strokeWidth={2} />
+        {notificationCount > 0 ? (
+          <View className="absolute -right-1 -top-1 min-w-[18px] items-center justify-center rounded-full bg-pink px-1 py-0.5">
+            <Text className="font-body-black text-[10px] leading-[12px] text-white">
+              {notificationCount > 99 ? "99+" : notificationCount}
+            </Text>
+          </View>
+        ) : null}
       </IconButton>
     </View>
   );

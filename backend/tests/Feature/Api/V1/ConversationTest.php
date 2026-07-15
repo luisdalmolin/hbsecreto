@@ -10,7 +10,9 @@ use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Message;
 use App\Models\User;
+use App\Notifications\ConversationMessageNotification;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 
 beforeEach(function (): void {
@@ -122,6 +124,27 @@ test('both sides can send trimmed messages', function (): void {
     $this->postJson("{$this->url}/{$this->incoming->id}/messages", ['body' => 'Combinado!'])
         ->assertCreated()
         ->assertJsonPath('isMine', true);
+});
+
+test('a message notifies only the counterpart without leaking message content', function (): void {
+    Notification::fake();
+
+    $this->postJson("{$this->url}/{$this->incoming->id}/messages", [
+        'body' => 'Isto deve permanecer privado.',
+    ])->assertCreated();
+
+    Notification::assertSentTo(
+        $this->giver,
+        ConversationMessageNotification::class,
+        function (ConversationMessageNotification $notification): bool {
+            $payload = $notification->toDatabase($this->giver);
+
+            return $notification->conversationId === $this->incoming->id
+                && $payload['body'] === 'Você recebeu uma nova mensagem anônima no amigo secreto.'
+                && ! str_contains($payload['body'], 'privado');
+        },
+    );
+    Notification::assertNotSentTo($this->receiver, ConversationMessageNotification::class);
 });
 
 test('message bodies require non-whitespace text within the length limit', function (): void {

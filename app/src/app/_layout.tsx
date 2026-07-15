@@ -11,6 +11,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { appFonts } from "@/theme/fonts";
 import { AuthSessionProvider, useAuthSession } from "@/auth/auth-session";
+import { NotificationProvider } from "@/notifications/notification-provider";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -31,7 +32,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthSessionProvider>
-          <RootNavigator />
+          <NotificationProvider>
+            <RootNavigator />
+          </NotificationProvider>
         </AuthSessionProvider>
         <StatusBar style="dark" />
       </SafeAreaProvider>
@@ -54,6 +57,7 @@ function RootNavigator() {
       </Stack.Protected>
       <Stack.Protected guard={Boolean(user)}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="notifications" />
       </Stack.Protected>
       <Stack.Screen name="invites/[token]" />
     </Stack>

@@ -18,6 +18,7 @@ import type { Group as HomeGroup } from "@/data/home";
 import { apiErrorMessage, initials } from "@/features/shared/presentation";
 import { useFocusResource } from "@/hooks/use-focus-resource";
 import { getGreetingKey } from "@/lib/greeting";
+import { useNotifications } from "@/notifications/notification-context";
 
 async function loadHomeGroups(signal: AbortSignal): Promise<HomeGroup[]> {
   const collection = await listGroups({ signal });
@@ -50,6 +51,7 @@ export default function HomeScreen() {
   const { user } = useAuthSession();
   const greeting = t(`home.greeting.${getGreetingKey()}`);
   const groups = useFocusResource(loadHomeGroups);
+  const { unreadCount } = useNotifications();
 
   return (
     <View className="flex-1 bg-bg">
@@ -68,6 +70,8 @@ export default function HomeScreen() {
             name={user?.name ?? ""}
             initials={initials(user?.name ?? "")}
             notificationsLabel={t("home.notifications")}
+            notificationCount={unreadCount}
+            onPressNotifications={() => router.push("/notifications")}
           />
           <SectionHeader
             title={t("home.groups.title")}

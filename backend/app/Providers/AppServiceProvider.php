@@ -3,13 +3,21 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Notifications\ExpoPush\ExpoPushTransport;
+use App\Notifications\ExpoPush\FakeExpoPushTransport;
+use App\Notifications\ExpoPush\HttpExpoPushTransport;
+use App\Policies\DatabaseNotificationPolicy;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -21,7 +29,19 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(ExpoPushTransport::class, function (): ExpoPushTransport {
+            if (app()->environment('testing')) {
+                return new FakeExpoPushTransport;
+            }
+
+            return new HttpExpoPushTransport(
+                http: app(Factory::class),
+                baseUrl: Config::string('services.expo_push.base_url'),
+                accessToken: Config::string('services.expo_push.access_token'),
+                timeout: Config::integer('services.expo_push.timeout'),
+                connectTimeout: Config::integer('services.expo_push.connect_timeout'),
+            );
+        });
     }
 
     /**
@@ -31,6 +51,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureMorphMap();
         $this->configureDefaults();
+        Gate::policy(DatabaseNotification::class, DatabaseNotificationPolicy::class);
 
         RateLimiter::for('login', fn (Request $request): Limit => Limit::perMinute(5)->by($request->ip()));
         RateLimiter::for('register', fn (Request $request): Limit => Limit::perMinute(5)->by($request->ip()));

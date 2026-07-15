@@ -2,16 +2,20 @@
 
 namespace App\Actions\Editions;
 
+use App\Actions\Notifications\NotifyEditionParticipants;
 use App\Enums\EditionStatus;
 use App\Exceptions\DomainConflictException;
 use App\Models\Edition;
+use App\Notifications\EditionRevealedNotification;
 use Illuminate\Support\Facades\DB;
 
 final class TransitionEdition
 {
+    public function __construct(private readonly NotifyEditionParticipants $notifyParticipants) {}
+
     public function handle(Edition $edition, EditionStatus $target): Edition
     {
-        return DB::transaction(function () use ($edition, $target): Edition {
+        $transitionedEdition = DB::transaction(function () use ($edition, $target): Edition {
             $lockedEdition = Edition::query()->lockForUpdate()->findOrFail($edition->id);
             $expected = match ($target) {
                 EditionStatus::Open => EditionStatus::Draft,
@@ -38,5 +42,15 @@ final class TransitionEdition
 
             return $lockedEdition->refresh();
         });
+
+        if ($target === EditionStatus::Revealed) {
+            $this->notifyParticipants->handle($transitionedEdition, new EditionRevealedNotification(
+                groupId: $transitionedEdition->group_id,
+                editionId: $transitionedEdition->id,
+                editionName: $transitionedEdition->name,
+            ));
+        }
+
+        return $transitionedEdition;
     }
 }

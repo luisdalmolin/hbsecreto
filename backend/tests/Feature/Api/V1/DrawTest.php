@@ -9,6 +9,8 @@ use App\Models\EditionParticipant;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\User;
+use App\Notifications\EditionDrawnNotification;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 
 beforeEach(function (): void {
@@ -139,6 +141,8 @@ test('preflight reports a Hall deficient rule set before drawing', function (): 
 });
 
 test('draw is atomic, private, and sequentially idempotent', function (): void {
+    Notification::fake();
+
     $first = $this->postJson("/api/v1/groups/{$this->group->id}/editions/{$this->edition->id}/draw")
         ->assertCreated()
         ->assertJsonPath('status', 'drawn')
@@ -159,6 +163,9 @@ test('draw is atomic, private, and sequentially idempotent', function (): void {
     expect($second->json())->toBe($first->json())
         ->and(Assignment::query()->whereBelongsTo($this->edition)->orderBy('id')->get()->toArray())->toBe($mapping)
         ->and(Conversation::query()->whereBelongsTo($this->edition)->count())->toBe(4);
+    Notification::assertSentTimes(EditionDrawnNotification::class, 4);
+    Notification::assertSentTo($this->admin, EditionDrawnNotification::class);
+    $this->memberUsers->each(fn (User $user) => Notification::assertSentTo($user, EditionDrawnNotification::class));
 });
 
 test('performed draw honors an administrator forced pair', function (): void {

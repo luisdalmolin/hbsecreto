@@ -6,6 +6,8 @@ use App\Models\EditionParticipant;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\User;
+use App\Notifications\EditionRevealedNotification;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 
 beforeEach(function (): void {
@@ -131,6 +133,26 @@ test('opening rejects fewer than two participants and lifecycle is strictly forw
         ->assertOk()
         ->assertJsonPath('status', 'archived');
     $this->putJson("/api/v1/groups/{$this->group->id}/editions/{$edition->id}/archive")->assertConflict();
+});
+
+test('revealing an edition notifies every active claimed participant', function (): void {
+    Notification::fake();
+    $member = User::factory()->create();
+    $memberRecord = GroupMember::factory()->for($this->group)->active($member)->create();
+    $edition = Edition::factory()->for($this->group)->drawn()->create(['created_by' => $this->admin->id]);
+    EditionParticipant::factory()->for($edition)->create([
+        'group_id' => $this->group->id,
+        'group_member_id' => $this->adminMember->id,
+    ]);
+    EditionParticipant::factory()->for($edition)->create([
+        'group_id' => $this->group->id,
+        'group_member_id' => $memberRecord->id,
+    ]);
+
+    $this->putJson("/api/v1/groups/{$this->group->id}/editions/{$edition->id}/reveal")->assertOk();
+
+    Notification::assertSentTo([$this->admin, $member], EditionRevealedNotification::class);
+    Notification::assertSentTimes(EditionRevealedNotification::class, 2);
 });
 
 test('the roster freezes after draw and only drafts can be deleted', function (): void {

@@ -2900,6 +2900,228 @@
                 ]
             }
         },
+        "/api/v1/notifications": {
+            "get": {
+                "tags": [
+                    "Notifications"
+                ],
+                "operationId": "listNotifications",
+                "responses": {
+                    "200": {
+                        "description": "Authenticated user notification inbox.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotificationCollection"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication is required.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/notifications/{notification}/read": {
+            "put": {
+                "tags": [
+                    "Notifications"
+                ],
+                "operationId": "markNotificationRead",
+                "parameters": [
+                    {
+                        "name": "notification",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Notification marked as read.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Notification"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication is required.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Only the notification owner may update it.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/notifications/read": {
+            "put": {
+                "tags": [
+                    "Notifications"
+                ],
+                "operationId": "markAllNotificationsRead",
+                "responses": {
+                    "204": {
+                        "description": "All notifications marked as read."
+                    },
+                    "401": {
+                        "description": "Authentication is required.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/push-devices": {
+            "post": {
+                "tags": [
+                    "Push devices"
+                ],
+                "operationId": "registerPushDevice",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterPushDeviceRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Push device registered or refreshed.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PushDevice"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication is required.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "The request payload is invalid.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/push-devices/{pushDevice}": {
+            "delete": {
+                "tags": [
+                    "Push devices"
+                ],
+                "operationId": "deletePushDevice",
+                "parameters": [
+                    {
+                        "name": "pushDevice",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Push device removed."
+                    },
+                    "401": {
+                        "description": "Authentication is required.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Only the device owner may remove it.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/groups/{group}/editions/{edition}/my-wishes": {
             "get": {
                 "tags": [
@@ -4341,6 +4563,140 @@
                 },
                 "type": "object"
             },
+            "NotificationCollection": {
+                "required": [
+                    "data",
+                    "meta",
+                    "unreadCount"
+                ],
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Notification"
+                        }
+                    },
+                    "meta": {
+                        "$ref": "#/components/schemas/PaginationMeta"
+                    },
+                    "unreadCount": {
+                        "type": "integer",
+                        "example": 2,
+                        "minimum": 0
+                    }
+                },
+                "type": "object"
+            },
+            "Notification": {
+                "required": [
+                    "id",
+                    "type",
+                    "title",
+                    "body",
+                    "url",
+                    "readAt",
+                    "createdAt"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "conversation-message",
+                            "edition-drawn",
+                            "edition-revealed"
+                        ]
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "Nova mensagem"
+                    },
+                    "body": {
+                        "type": "string",
+                        "example": "Você recebeu uma nova mensagem anônima no amigo secreto."
+                    },
+                    "url": {
+                        "type": "string",
+                        "example": "/groups/1/editions/2"
+                    },
+                    "readAt": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "PushDevice": {
+                "required": [
+                    "id",
+                    "platform",
+                    "registeredAt"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "platform": {
+                        "type": "string",
+                        "enum": [
+                            "ios",
+                            "android"
+                        ]
+                    },
+                    "deviceName": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "example": "iPhone de Maria"
+                    },
+                    "registeredAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "RegisterPushDeviceRequest": {
+                "required": [
+                    "expoPushToken",
+                    "platform"
+                ],
+                "properties": {
+                    "expoPushToken": {
+                        "type": "string",
+                        "example": "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]",
+                        "maxLength": 255
+                    },
+                    "platform": {
+                        "type": "string",
+                        "enum": [
+                            "ios",
+                            "android"
+                        ]
+                    },
+                    "deviceName": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "example": "iPhone de Maria",
+                        "maxLength": 255
+                    }
+                },
+                "type": "object"
+            },
             "Error": {
                 "required": [
                     "message"
@@ -4507,6 +4863,12 @@
         },
         {
             "name": "Invitations"
+        },
+        {
+            "name": "Notifications"
+        },
+        {
+            "name": "Push devices"
         },
         {
             "name": "Wishes"

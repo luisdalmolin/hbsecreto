@@ -63,6 +63,32 @@ const resources = {
           profile: "Suas informações e preferências vão aparecer aqui.",
         },
       },
+      notifications: {
+        title: "Notificações",
+        subtitle: "Acompanhe as novidades dos seus amigos secretos.",
+        loading: "Carregando notificações…",
+        loadError: "Não foi possível carregar suas notificações.",
+        empty: "Nenhuma notificação por aqui.",
+        emptyHint: "Quando algo importante acontecer, você verá aqui.",
+        markAllRead: "Ler todas",
+        push: {
+          channelName: "Notificações gerais",
+          title: "Receba avisos no celular",
+          undetermined:
+            "Ative as notificações para saber quando houver mensagens e novidades do sorteio.",
+          denied:
+            "As notificações estão bloqueadas. Você pode liberá-las nos ajustes do aparelho.",
+          unsupported:
+            "As notificações push precisam de um aparelho e de uma versão de desenvolvimento do app.",
+          missingProjectId:
+            "O projeto Expo ainda precisa ser vinculado ao EAS para ativar notificações push.",
+          error:
+            "Não foi possível ativar as notificações agora. Verifique sua conexão e tente novamente.",
+          enable: "Ativar notificações",
+          enabling: "Ativando…",
+          openSettings: "Abrir ajustes",
+        },
+      },
       auth: {
         brand: "CPX Secreto",
         fields: {

@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'expo_push' => [
+        'base_url' => env('EXPO_PUSH_BASE_URL', 'https://exp.host/--/api/v2'),
+        'access_token' => env('EXPO_ACCESS_TOKEN', ''),
+        'timeout' => (int) env('EXPO_PUSH_TIMEOUT', 10),
+        'connect_timeout' => (int) env('EXPO_PUSH_CONNECT_TIMEOUT', 3),
+    ],
+
 ];

@@ -3,6 +3,7 @@
 namespace App\Actions\Draws;
 
 use App\Actions\Conversations\CreateAssignmentConversations;
+use App\Actions\Notifications\NotifyEditionParticipants;
 use App\Draws\DrawConflictException;
 use App\Draws\DrawFailure;
 use App\Draws\DrawFailureCode;
@@ -13,6 +14,7 @@ use App\Models\DrawConstraint;
 use App\Models\Edition;
 use App\Models\EditionParticipant;
 use App\Models\Group;
+use App\Notifications\EditionDrawnNotification;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -22,11 +24,14 @@ final readonly class PerformDraw
         private BuildDrawInput $buildInput,
         private EditionTypeRegistry $registry,
         private CreateAssignmentConversations $createConversations,
+        private NotifyEditionParticipants $notifyParticipants,
     ) {}
 
     public function handle(Edition $edition, ?int $seed = null): Edition
     {
-        return DB::transaction(function () use ($edition, $seed): Edition {
+        $performed = false;
+        $drawnEdition = DB::transaction(function () use ($edition, $seed, &$performed): Edition {
+            $performed = false;
             Group::query()->whereKey($edition->group_id)->lockForUpdate()->firstOrFail();
             $lockedEdition = Edition::query()->whereKey($edition->id)->lockForUpdate()->firstOrFail();
             /** @var Collection<int, EditionParticipant> $participants */
@@ -76,9 +81,20 @@ final readonly class PerformDraw
             ));
             $this->createConversations->handle($lockedEdition);
             $lockedEdition->update(['status' => EditionStatus::Drawn, 'drawn_at' => $timestamp]);
+            $performed = true;
 
             return $lockedEdition->refresh();
         }, attempts: 3);
+
+        if ($performed) {
+            $this->notifyParticipants->handle($drawnEdition, new EditionDrawnNotification(
+                groupId: $drawnEdition->group_id,
+                editionId: $drawnEdition->id,
+                editionName: $drawnEdition->name,
+            ));
+        }
+
+        return $drawnEdition;
     }
 
     /**
