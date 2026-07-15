@@ -14,7 +14,7 @@ final class NotificationData extends Resource
 {
     public function __construct(
         #[OA\Property(type: 'string', format: 'uuid')] public string $id,
-        #[OA\Property(type: 'string', enum: ['conversation-message', 'edition-drawn', 'edition-revealed'])] public AppNotificationType $type,
+        #[OA\Property(type: 'string', enum: ['conversation-message', 'edition-drawn', 'edition-revealed', 'push-diagnostic'])] public AppNotificationType $type,
         #[OA\Property(example: 'Nova mensagem')] public string $title,
         #[OA\Property(example: 'Você recebeu uma nova mensagem anônima no amigo secreto.')] public string $body,
         #[OA\Property(example: '/groups/1/editions/2')] public string $url,

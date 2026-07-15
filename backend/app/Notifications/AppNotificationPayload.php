@@ -24,7 +24,7 @@ final readonly class AppNotificationPayload
         ];
     }
 
-    public function toExpoPush(string $notificationId): ExpoPushContent
+    public function toExpoPush(string $notificationId, int $badge): ExpoPushContent
     {
         return new ExpoPushContent(
             title: $this->title,
@@ -34,6 +34,7 @@ final readonly class AppNotificationPayload
                 'type' => $this->type->value,
                 'url' => $this->url,
             ],
+            badge: $badge,
         );
     }
 }

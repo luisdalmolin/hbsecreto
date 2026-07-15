@@ -1,9 +1,14 @@
 <?php
 
+use App\Enums\PushDeliveryStatus;
+use App\Models\NotificationPreference;
+use App\Models\PushDelivery;
 use App\Models\PushDevice;
 use App\Models\User;
 use App\Notifications\Channels\ExpoPushChannel;
 use App\Notifications\ConversationMessageNotification;
+use App\Notifications\EditionDrawnNotification;
+use App\Notifications\ExpoPush\ExpoPushReceipt;
 use App\Notifications\ExpoPush\ExpoPushTransport;
 use App\Notifications\ExpoPush\FakeExpoPushTransport;
 use Illuminate\Support\Facades\Auth;
@@ -17,6 +22,7 @@ function notificationToken(User $user, string $name = 'Test device'): string
 test('notification and push device endpoints require authentication', function (): void {
     $this->getJson('/api/v1/notifications')->assertUnauthorized();
     $this->putJson('/api/v1/notifications/read')->assertUnauthorized();
+    $this->getJson('/api/v1/notification-preferences')->assertUnauthorized();
     $this->withoutRequestValidation()->postJson('/api/v1/push-devices', [])->assertUnauthorized();
 });
 
@@ -104,6 +110,22 @@ test('users can list and read their durable notification inbox', function (): vo
     expect($user->unreadNotifications()->count())->toBe(0);
 });
 
+test('the notification inbox supports pagination without changing the global unread count', function (): void {
+    $user = User::factory()->create();
+    $token = notificationToken($user);
+
+    foreach (range(1, 17) as $conversationId) {
+        Notification::sendNow($user, new ConversationMessageNotification(1, 2, $conversationId), ['database']);
+    }
+
+    $this->withToken($token)->getJson('/api/v1/notifications?page=2')
+        ->assertOk()
+        ->assertJsonCount(2, 'data')
+        ->assertJsonPath('meta.currentPage', 2)
+        ->assertJsonPath('meta.lastPage', 2)
+        ->assertJsonPath('unreadCount', 17);
+});
+
 test('Laravel delivers application notifications through the reusable Expo channel', function (): void {
     $user = User::factory()->create();
     notificationToken($user);
@@ -123,11 +145,129 @@ test('Laravel delivers application notifications through the reusable Expo chann
     expect($notification->via($user))->toContain('database', ExpoPushChannel::class)
         ->and($transport)->toBeInstanceOf(FakeExpoPushTransport::class)
         ->and($transport->messages())->toHaveCount(1)
+        ->and($transport->messages()[0]->content->badge)->toBe(1)
         ->and($transport->messages()[0]->content->data)->toBe([
             'notificationId' => $databaseNotification->id,
             'type' => 'conversation-message',
             'url' => '/groups/1/editions/2/conversations/3',
-        ]);
+        ])
+        ->and(PushDelivery::query()->sole()->status)->toBe(PushDeliveryStatus::Accepted)
+        ->and(PushDelivery::query()->sole()->expo_ticket_id)->toBe('fake-ticket-1');
+});
+
+test('users control push categories while durable inbox notifications remain enabled', function (): void {
+    $user = User::factory()->create();
+    $token = notificationToken($user);
+    PushDevice::query()->create([
+        'user_id' => $user->id,
+        'personal_access_token_id' => $user->tokens()->firstOrFail()->id,
+        'expo_push_token' => 'ExponentPushToken[preferencesdevice]',
+        'platform' => 'ios',
+        'last_registered_at' => now(),
+    ]);
+
+    $this->withToken($token)->getJson('/api/v1/notification-preferences')
+        ->assertOk()
+        ->assertExactJson(['conversationMessages' => true, 'editionUpdates' => true]);
+    $this->withToken($token)->putJson('/api/v1/notification-preferences', [
+        'conversationMessages' => false,
+        'editionUpdates' => true,
+    ])->assertOk()->assertJsonPath('conversationMessages', false);
+
+    Notification::sendNow($user, new ConversationMessageNotification(1, 2, 3));
+    Notification::sendNow($user, new EditionDrawnNotification(1, 2, 'Natal'));
+
+    $transport = app(ExpoPushTransport::class);
+    expect(NotificationPreference::query()->count())->toBe(2)
+        ->and($user->notifications()->count())->toBe(2)
+        ->and($transport)->toBeInstanceOf(FakeExpoPushTransport::class)
+        ->and($transport->messages())->toHaveCount(1)
+        ->and($transport->messages()[0]->content->data['type'])->toBe('edition-drawn');
+});
+
+test('Expo receipts update delivery audits and disable unregistered devices', function (): void {
+    $user = User::factory()->create();
+    notificationToken($user);
+    $device = PushDevice::query()->create([
+        'user_id' => $user->id,
+        'personal_access_token_id' => $user->tokens()->firstOrFail()->id,
+        'expo_push_token' => 'ExponentPushToken[receiptdevice]',
+        'platform' => 'android',
+        'last_registered_at' => now(),
+    ]);
+    Notification::sendNow($user, new ConversationMessageNotification(1, 2, 3));
+    $delivery = PushDelivery::query()->sole();
+    $delivery->update(['attempted_at' => now()->subMinutes(16)]);
+    $transport = app(ExpoPushTransport::class);
+    expect($transport)->toBeInstanceOf(FakeExpoPushTransport::class);
+    $transport->addReceipt(new ExpoPushReceipt(
+        ticketId: $delivery->expo_ticket_id ?? '',
+        delivered: false,
+        errorCode: 'DeviceNotRegistered',
+        errorMessage: 'The device is no longer registered.',
+    ));
+
+    $this->artisan('notifications:check-push-receipts')->assertSuccessful();
+
+    expect($delivery->refresh()->status)->toBe(PushDeliveryStatus::Failed)
+        ->and($delivery->error_code)->toBe('DeviceNotRegistered')
+        ->and($delivery->receipt_checked_at)->not->toBeNull()
+        ->and($device->refresh()->disabled_at)->not->toBeNull();
+});
+
+test('missing receipts are retried until they expire', function (): void {
+    $user = User::factory()->create();
+    notificationToken($user);
+    PushDevice::query()->create([
+        'user_id' => $user->id,
+        'personal_access_token_id' => $user->tokens()->firstOrFail()->id,
+        'expo_push_token' => 'ExponentPushToken[missingreceipt]',
+        'platform' => 'ios',
+        'last_registered_at' => now(),
+    ]);
+    Notification::sendNow($user, new ConversationMessageNotification(1, 2, 3));
+    $delivery = PushDelivery::query()->sole();
+    $delivery->update(['attempted_at' => now()->subMinutes(16)]);
+
+    $this->artisan('notifications:check-push-receipts')->assertSuccessful();
+    expect($delivery->refresh()->status)->toBe(PushDeliveryStatus::Accepted)
+        ->and($delivery->receipt_checked_at)->not->toBeNull();
+
+    $delivery->update(['attempted_at' => now()->subHours(25)]);
+    $this->artisan('notifications:check-push-receipts')->assertSuccessful();
+    expect($delivery->refresh()->status)->toBe(PushDeliveryStatus::Expired)
+        ->and($delivery->error_code)->toBe('ExpoReceiptExpired');
+
+    $delivery->update(['completed_at' => now()->subDays(31)]);
+    $this->artisan('notifications:prune-push-deliveries')->assertSuccessful();
+    expect($delivery->fresh())->toBeNull();
+});
+
+test('stale devices are pruned and diagnostic pushes expose their ticket', function (): void {
+    $user = User::factory()->create();
+    notificationToken($user);
+    PushDevice::query()->create([
+        'user_id' => $user->id,
+        'personal_access_token_id' => $user->tokens()->firstOrFail()->id,
+        'expo_push_token' => 'ExponentPushToken[staledevice]',
+        'platform' => 'ios',
+        'last_registered_at' => now()->subDays(91),
+    ]);
+    PushDevice::query()->create([
+        'user_id' => $user->id,
+        'personal_access_token_id' => $user->tokens()->firstOrFail()->id,
+        'expo_push_token' => 'ExponentPushToken[currentdevice]',
+        'platform' => 'ios',
+        'last_registered_at' => now(),
+    ]);
+
+    $this->artisan('notifications:prune-push-devices')->assertSuccessful();
+    $this->artisan('notifications:test-push', ['user' => $user->email])
+        ->expectsOutputToContain('fake-ticket-1')
+        ->assertSuccessful();
+
+    expect(PushDevice::query()->count())->toBe(1)
+        ->and(PushDelivery::query()->sole()->notification_type->value)->toBe('push-diagnostic');
 });
 
 test('users cannot mark another users notification as read', function (): void {

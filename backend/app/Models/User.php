@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\NotificationCategory;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -46,6 +47,21 @@ class User extends Authenticatable implements HasLocalePreference
     public function pushDevices(): HasMany
     {
         return $this->hasMany(PushDevice::class);
+    }
+
+    /** @return HasMany<NotificationPreference, $this> */
+    public function notificationPreferences(): HasMany
+    {
+        return $this->hasMany(NotificationPreference::class);
+    }
+
+    public function wantsPushNotification(NotificationCategory $category): bool
+    {
+        $enabled = $this->notificationPreferences()
+            ->where('category', $category->value)
+            ->value('push_enabled');
+
+        return $enabled === null || (bool) $enabled;
     }
 
     public function preferredLocale(): string

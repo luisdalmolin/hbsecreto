@@ -21,6 +21,7 @@ final class NotificationController extends Controller
     #[Authorize('viewAny', DatabaseNotification::class)]
     #[OA\Get(
         path: '/api/v1/notifications', operationId: 'listNotifications', tags: ['Notifications'], security: [['bearerAuth' => []]],
+        parameters: [new OA\QueryParameter(name: 'page', schema: new OA\Schema(type: 'integer', minimum: 1))],
         responses: [
             new OA\Response(response: 200, description: 'Authenticated user notification inbox.', content: new OA\JsonContent(ref: '#/components/schemas/NotificationCollection')),
             new OA\Response(response: 401, description: 'Authentication is required.', content: new OA\JsonContent(ref: '#/components/schemas/Error')),

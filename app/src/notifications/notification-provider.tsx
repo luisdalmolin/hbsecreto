@@ -1,10 +1,4 @@
-import {
-  type PropsWithChildren,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { type PropsWithChildren, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AppState } from "react-native";
 
@@ -23,6 +17,7 @@ import {
 import {
   type PushResponseData,
   registerForPushNotifications,
+  setApplicationBadge,
   subscribeToPushNotifications,
 } from "./push-service";
 
@@ -34,95 +29,112 @@ export function NotificationProvider({ children }: PropsWithChildren) {
     useState<PushRegistrationStatus>("checking");
   const [isRegistering, setIsRegistering] = useState(false);
 
-  const setUnreadCount = useCallback((count: number) => {
-    setUnreadCountState(Math.max(0, count));
-  }, []);
+  const setUnreadCount = (count: number) => {
+    const normalizedCount = Math.max(0, count);
+    setUnreadCountState(normalizedCount);
+    void setApplicationBadge(normalizedCount).catch(() => undefined);
+  };
 
-  const refreshUnreadCount = useCallback(async () => {
+  const refreshUnreadCount = async () => {
     if (!user) {
-      setUnreadCountState(0);
+      setUnreadCount(0);
       return;
     }
 
     const inbox = await listNotifications();
-    setUnreadCountState(inbox.unreadCount);
-  }, [user]);
+    setUnreadCount(inbox.unreadCount);
+  };
 
-  const registerForPush = useCallback(
-    (requestPermission: boolean): Promise<void> => {
-      if (!user) return Promise.resolve();
-      setIsRegistering(true);
-      return registerForPushNotifications(
-        requestPermission,
-        t("notifications.push.channelName"),
-      )
-        .then(setPushStatus)
-        .catch(() => setPushStatus("error"))
-        .finally(() => setIsRegistering(false));
-    },
-    [t, user],
-  );
+  const registerForPush = (requestPermission: boolean): Promise<void> => {
+    if (!user) return Promise.resolve();
+    setIsRegistering(true);
+    return registerForPushNotifications(
+      requestPermission,
+      t("notifications.push.channelName"),
+    )
+      .then(setPushStatus)
+      .catch(() => setPushStatus("error"))
+      .finally(() => setIsRegistering(false));
+  };
 
-  const enablePushNotifications = useCallback(
-    () => registerForPush(true),
-    [registerForPush],
-  );
+  const enablePushNotifications = () => registerForPush(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      void setApplicationBadge(0).catch(() => undefined);
+      return;
+    }
 
-    void refreshUnreadCount().catch(() => undefined);
-    void registerForPush(false);
-  }, [refreshUnreadCount, registerForPush, user]);
+    let active = true;
+    const updateCount = (count: number) => {
+      if (!active) return;
+      const normalizedCount = Math.max(0, count);
+      setUnreadCountState(normalizedCount);
+      void setApplicationBadge(normalizedCount).catch(() => undefined);
+    };
+    const refreshCount = () =>
+      listNotifications()
+        .then((inbox) => updateCount(inbox.unreadCount))
+        .catch(() => undefined);
 
-  useEffect(() => {
-    if (!user) return;
+    void listNotifications()
+      .then((inbox) => updateCount(inbox.unreadCount))
+      .catch(() => undefined);
+    void registerForPushNotifications(
+      false,
+      t("notifications.push.channelName"),
+    )
+      .then((status) => {
+        if (active) setPushStatus(status);
+      })
+      .catch(() => {
+        if (active) setPushStatus("error");
+      });
 
     const unsubscribeFromPush = subscribeToPushNotifications({
       onReceived: () => {
-        void refreshUnreadCount().catch(() => undefined);
+        void refreshCount();
       },
       onResponse: (data) => {
-        void handleNotificationResponse(data, refreshUnreadCount);
+        void handleNotificationResponse(data, refreshCount);
       },
       onTokenChanged: () => {
-        void registerForPush(false);
+        void registerForPushNotifications(
+          false,
+          t("notifications.push.channelName"),
+        )
+          .then((status) => {
+            if (active) setPushStatus(status);
+          })
+          .catch(() => {
+            if (active) setPushStatus("error");
+          });
       },
     });
     const appStateSubscription = AppState.addEventListener(
       "change",
       (state) => {
         if (state === "active") {
-          void refreshUnreadCount().catch(() => undefined);
+          void refreshCount();
         }
       },
     );
 
     return () => {
+      active = false;
       unsubscribeFromPush();
       appStateSubscription.remove();
     };
-  }, [refreshUnreadCount, registerForPush, user]);
+  }, [t, user]);
 
-  const value = useMemo<NotificationContextValue>(
-    () => ({
-      unreadCount: user ? unreadCount : 0,
-      pushStatus: user ? pushStatus : "checking",
-      isRegistering,
-      enablePushNotifications,
-      refreshUnreadCount,
-      setUnreadCount,
-    }),
-    [
-      enablePushNotifications,
-      isRegistering,
-      pushStatus,
-      refreshUnreadCount,
-      setUnreadCount,
-      unreadCount,
-      user,
-    ],
-  );
+  const value: NotificationContextValue = {
+    unreadCount: user ? unreadCount : 0,
+    pushStatus: user ? pushStatus : "checking",
+    isRegistering,
+    enablePushNotifications,
+    refreshUnreadCount,
+    setUnreadCount,
+  };
 
   return (
     <NotificationContext.Provider value={value}>

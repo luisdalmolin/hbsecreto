@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Enums\AppNotificationType;
+use App\Enums\NotificationCategory;
 use App\Models\User;
 use App\Notifications\Channels\ExpoPushChannel;
 use App\Notifications\ExpoPush\ExpoPushContent;
@@ -57,7 +58,20 @@ abstract class AppNotification extends Notification implements SendsExpoPush, Sh
 
     final public function toExpoPush(object $notifiable): ExpoPushContent
     {
-        return $this->payload($this->user($notifiable))->toExpoPush($this->id);
+        $user = $this->user($notifiable);
+
+        return $this->payload($user)->toExpoPush($this->id, $user->unreadNotifications()->count());
+    }
+
+    final public function pushNotificationType(): string
+    {
+        return $this->type()->value;
+    }
+
+    public function shouldSend(object $notifiable, string $channel): bool
+    {
+        return $channel !== ExpoPushChannel::class
+            || $this->user($notifiable)->wantsPushNotification($this->category());
     }
 
     final public function databaseType(object $notifiable): string
@@ -66,6 +80,8 @@ abstract class AppNotification extends Notification implements SendsExpoPush, Sh
     }
 
     abstract public function type(): AppNotificationType;
+
+    abstract public function category(): NotificationCategory;
 
     abstract protected function payload(User $user): AppNotificationPayload;
 

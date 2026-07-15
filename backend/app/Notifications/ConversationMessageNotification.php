@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Enums\AppNotificationType;
+use App\Enums\NotificationCategory;
 use App\Models\User;
 use Illuminate\Support\Facades\Lang;
 
@@ -19,6 +20,11 @@ final class ConversationMessageNotification extends AppNotification
     public function type(): AppNotificationType
     {
         return AppNotificationType::ConversationMessage;
+    }
+
+    public function category(): NotificationCategory
+    {
+        return NotificationCategory::ConversationMessages;
     }
 
     protected function payload(User $user): AppNotificationPayload

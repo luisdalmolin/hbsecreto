@@ -2906,6 +2906,16 @@
                     "Notifications"
                 ],
                 "operationId": "listNotifications",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Authenticated user notification inbox.",
@@ -3003,6 +3013,94 @@
                     },
                     "401": {
                         "description": "Authentication is required.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/notification-preferences": {
+            "get": {
+                "tags": [
+                    "Notification preferences"
+                ],
+                "operationId": "getNotificationPreferences",
+                "responses": {
+                    "200": {
+                        "description": "Current notification preferences.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotificationPreferences"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication is required.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Notification preferences"
+                ],
+                "operationId": "updateNotificationPreferences",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateNotificationPreferencesRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated notification preferences.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotificationPreferences"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication is required.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "The request payload is invalid.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -4607,7 +4705,8 @@
                         "enum": [
                             "conversation-message",
                             "edition-drawn",
-                            "edition-revealed"
+                            "edition-revealed",
+                            "push-diagnostic"
                         ]
                     },
                     "title": {
@@ -4632,6 +4731,23 @@
                     "createdAt": {
                         "type": "string",
                         "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "NotificationPreferences": {
+                "required": [
+                    "conversationMessages",
+                    "editionUpdates"
+                ],
+                "properties": {
+                    "conversationMessages": {
+                        "type": "boolean",
+                        "default": true
+                    },
+                    "editionUpdates": {
+                        "type": "boolean",
+                        "default": true
                     }
                 },
                 "type": "object"
@@ -4693,6 +4809,21 @@
                         ],
                         "example": "iPhone de Maria",
                         "maxLength": 255
+                    }
+                },
+                "type": "object"
+            },
+            "UpdateNotificationPreferencesRequest": {
+                "required": [
+                    "conversationMessages",
+                    "editionUpdates"
+                ],
+                "properties": {
+                    "conversationMessages": {
+                        "type": "boolean"
+                    },
+                    "editionUpdates": {
+                        "type": "boolean"
                     }
                 },
                 "type": "object"
@@ -4866,6 +4997,9 @@
         },
         {
             "name": "Notifications"
+        },
+        {
+            "name": "Notification preferences"
         },
         {
             "name": "Push devices"

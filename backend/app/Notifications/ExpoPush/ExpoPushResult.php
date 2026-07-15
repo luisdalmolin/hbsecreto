@@ -4,13 +4,20 @@ namespace App\Notifications\ExpoPush;
 
 final readonly class ExpoPushResult
 {
-    /**
-     * @param  array<int, string>  $invalidTokens
-     * @param  array<int, string>  $errors
-     */
-    public function __construct(
-        public int $acceptedCount,
-        public array $invalidTokens = [],
-        public array $errors = [],
-    ) {}
+    /** @param array<int, ExpoPushTicket> $tickets */
+    public function __construct(public array $tickets) {}
+
+    public function acceptedCount(): int
+    {
+        return count(array_filter($this->tickets, fn (ExpoPushTicket $ticket): bool => $ticket->accepted));
+    }
+
+    /** @return array<int, string> */
+    public function invalidTokens(): array
+    {
+        return array_values(array_unique(array_map(
+            fn (ExpoPushTicket $ticket): string => $ticket->token,
+            array_filter($this->tickets, fn (ExpoPushTicket $ticket): bool => $ticket->errorCode === 'DeviceNotRegistered'),
+        )));
+    }
 }

@@ -22,9 +22,7 @@ final readonly class HttpExpoPushTransport implements ExpoPushTransport
 
     public function send(ExpoPushMessage ...$messages): ExpoPushResult
     {
-        $acceptedCount = 0;
-        $invalidTokens = [];
-        $errors = [];
+        $results = [];
 
         foreach (array_chunk($messages, 100) as $batch) {
             $response = $this->request()
@@ -45,23 +43,61 @@ final readonly class HttpExpoPushTransport implements ExpoPushTransport
                 }
 
                 if (Arr::get($ticket, 'status') === 'ok') {
-                    $acceptedCount++;
+                    $ticketId = Arr::get($ticket, 'id');
+                    if (! is_string($ticketId)) {
+                        throw new UnexpectedValueException('The Expo push API returned a ticket without an ID.');
+                    }
+
+                    $results[] = new ExpoPushTicket($batch[$index]->token, true, $ticketId);
 
                     continue;
                 }
 
                 $error = Arr::get($ticket, 'details.error');
                 $token = $batch[$index]->token;
-
-                if ($error === 'DeviceNotRegistered') {
-                    $invalidTokens[] = $token;
-                }
-
-                $errors[] = is_string($error) ? $error : 'UnknownExpoPushError';
+                $message = Arr::get($ticket, 'message');
+                $results[] = new ExpoPushTicket(
+                    token: $token,
+                    accepted: false,
+                    errorCode: is_string($error) ? $error : 'UnknownExpoPushError',
+                    errorMessage: is_string($message) ? $message : null,
+                );
             }
         }
 
-        return new ExpoPushResult($acceptedCount, array_values(array_unique($invalidTokens)), $errors);
+        return new ExpoPushResult($results);
+    }
+
+    public function receipts(string ...$ticketIds): array
+    {
+        $results = [];
+
+        foreach (array_chunk($ticketIds, 1000) as $batch) {
+            $response = $this->request()->post('/push/getReceipts', ['ids' => $batch])->throw();
+            $receipts = $response->json('data');
+
+            if (! is_array($receipts)) {
+                throw new UnexpectedValueException('The Expo push API returned an invalid receipt response.');
+            }
+
+            foreach ($receipts as $ticketId => $receipt) {
+                if (! is_string($ticketId) || ! is_array($receipt)) {
+                    throw new UnexpectedValueException('The Expo push API returned an invalid receipt.');
+                }
+
+                $delivered = Arr::get($receipt, 'status') === 'ok';
+                $error = Arr::get($receipt, 'details.error');
+                $message = Arr::get($receipt, 'message');
+                $results[$ticketId] = new ExpoPushReceipt(
+                    ticketId: $ticketId,
+                    delivered: $delivered,
+                    errorCode: $delivered ? null : (is_string($error) ? $error : 'UnknownExpoPushReceiptError'),
+                    errorMessage: is_string($message) ? $message : null,
+                );
+            }
+        }
+
+        return $results;
     }
 
     private function request(): PendingRequest
@@ -75,7 +111,7 @@ final readonly class HttpExpoPushTransport implements ExpoPushTransport
             ->retry(
                 [100, 500, 1000],
                 when: fn (Throwable $exception): bool => $exception instanceof ConnectionException
-                    || ($exception instanceof RequestException && $exception->response->serverError()),
+                    || ($exception instanceof RequestException && ($exception->response->serverError() || $exception->response->status() === 429)),
             );
 
         return $this->accessToken === ''

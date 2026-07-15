@@ -23,3 +23,7 @@ export function subscribeToPushNotifications(
 ): () => void {
   return () => undefined;
 }
+
+export async function setApplicationBadge(_count: number): Promise<void> {
+  return undefined;
+}

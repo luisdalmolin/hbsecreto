@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Laravel\Sanctum\PersonalAccessToken;
 
@@ -38,6 +39,12 @@ class PushDevice extends Model
     public function personalAccessToken(): BelongsTo
     {
         return $this->belongsTo(PersonalAccessToken::class);
+    }
+
+    /** @return HasMany<PushDelivery, $this> */
+    public function pushDeliveries(): HasMany
+    {
+        return $this->hasMany(PushDelivery::class);
     }
 
     /** @param Builder<PushDevice> $query */

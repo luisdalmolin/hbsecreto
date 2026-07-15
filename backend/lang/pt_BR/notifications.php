@@ -13,4 +13,8 @@ return [
         'title' => 'Amigo secreto revelado',
         'body' => 'As combinações de :edition foram reveladas.',
     ],
+    'push_diagnostic' => [
+        'title' => 'Teste de notificações',
+        'body' => 'As notificações push estão configuradas corretamente.',
+    ],
 ];

@@ -17,6 +17,7 @@ final readonly class ExpoPushMessage
             'title' => $this->content->title,
             'body' => $this->content->body,
             'data' => $this->content->data,
+            'badge' => $this->content->badge,
             'sound' => 'default',
             'channelId' => $this->content->channelId,
         ];

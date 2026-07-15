@@ -12,7 +12,7 @@ const GENERAL_CHANNEL_ID = "general";
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldPlaySound: true,
-    shouldSetBadge: false,
+    shouldSetBadge: true,
     shouldShowBanner: true,
     shouldShowList: true,
   }),
@@ -104,6 +104,10 @@ export function subscribeToPushNotifications({
     responseSubscription.remove();
     tokenSubscription.remove();
   };
+}
+
+export async function setApplicationBadge(count: number): Promise<void> {
+  await Notifications.setBadgeCountAsync(Math.max(0, count));
 }
 
 function getProjectId(): string | null {

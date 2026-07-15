@@ -28,9 +28,11 @@ The approved domain model covers:
 
 Notifications use Laravel's notification system as the single delivery pipeline. Every application notification is stored through the database channel for the in-app inbox and sent through a custom Expo Push channel for registered mobile devices. The Expo integration is isolated behind a transport contract with real and fake implementations, so tests never make network requests and another push provider can be introduced without changing notification producers.
 
-Push device registrations belong to both the user and the active Sanctum access token. Revoking that token removes its push route, which prevents a signed-out or shared device from receiving notifications for the previous account. Chat messages, completed draws, and edition reveals are the first notification producers; future producers can extend the same base notification payload and channels.
+Push device registrations belong to both the user and the active Sanctum access token. Revoking that token removes its push route, which prevents a signed-out or shared device from receiving notifications for the previous account. Chat messages, completed draws, and edition reveals are the first notification producers; future producers can extend the same base notification payload and channels. Per-category preferences control push delivery without removing durable inbox entries.
 
-The Expo client registers granted devices, exposes a durable notification inbox, updates unread badges when the app returns to the foreground, and handles internal deep links from foreground, background, and cold-start notification responses. Remote push delivery requires a development or production build and an EAS project ID, supplied by EAS automatically or through `EXPO_PUBLIC_EAS_PROJECT_ID`.
+Every device delivery stores an audit row with its Expo ticket. The scheduler checks receipts after Expo's recommended delay, disables unregistered devices, expires missing receipts after 24 hours, prunes stale registrations, and retains completed audit data for a configurable window. Operators can use `notifications:test-push`, `notifications:check-push-receipts`, `notifications:prune-push-devices`, and `notifications:prune-push-deliveries` for diagnostics and maintenance.
+
+The Expo client registers granted devices, exposes a paginated notification inbox, synchronizes both in-app and native icon badges, and handles internal deep links from foreground, background, and cold-start notification responses. Remote push delivery requires a development or production build and an EAS project ID, supplied by EAS automatically or through `EXPO_PUBLIC_EAS_PROJECT_ID`.
 
 The full proposed domain design is documented in [data-model.md](data-model.md).
 

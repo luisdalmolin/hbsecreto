@@ -1,7 +1,12 @@
 import type {
   Notification as AppNotification,
   NotificationCollection,
+  NotificationPreferences,
 } from "@/api/generated/models";
+import {
+  getNotificationPreferences,
+  updateNotificationPreferences,
+} from "@/api/generated/notification-preferences/notification-preferences";
 import {
   listNotifications,
   markAllNotificationsRead,
@@ -9,7 +14,11 @@ import {
 } from "@/api/generated/notifications/notifications";
 import { AppScreen } from "@/components/common/app-screen";
 import { ScreenState } from "@/components/common/screen-state";
-import { NotificationListItem } from "@/components/notifications";
+import {
+  NotificationListItem,
+  NotificationPreferencesCard,
+  type NotificationPreferenceKey,
+} from "@/components/notifications";
 import { Button, Card, Text } from "@/components/ui";
 import { apiErrorMessage } from "@/features/shared/presentation";
 import { useFocusResource } from "@/hooks/use-focus-resource";
@@ -20,14 +29,22 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 
-const loadInbox = (signal: AbortSignal) => listNotifications({ signal });
+const loadInbox = (signal: AbortSignal) =>
+  listNotifications(undefined, { signal });
+const loadPreferences = (signal: AbortSignal) =>
+  getNotificationPreferences({ signal });
 
 export default function NotificationsScreen() {
   const { i18n, t } = useTranslation();
   const inbox = useFocusResource(loadInbox);
+  const preferences = useFocusResource(loadPreferences);
   const { pushStatus, isRegistering, enablePushNotifications, setUnreadCount } =
     useNotifications();
   const [isMarkingAll, setIsMarkingAll] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isSavingPreference, setIsSavingPreference] = useState(false);
+  const [preferenceSaveError, setPreferenceSaveError] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
 
   useEffect(() => {
     if (inbox.data) setUnreadCount(inbox.data.unreadCount);
@@ -70,13 +87,61 @@ export default function NotificationsScreen() {
       .finally(() => setIsMarkingAll(false));
   }
 
+  function loadMore(): Promise<void> {
+    const current = inbox.data;
+    if (!current || current.meta.currentPage >= current.meta.lastPage) {
+      return Promise.resolve();
+    }
+
+    setIsLoadingMore(true);
+    setLoadMoreError(false);
+    return listNotifications({ page: current.meta.currentPage + 1 })
+      .then((nextPage) => {
+        inbox.setData((latest) =>
+          latest
+            ? {
+                ...nextPage,
+                data: [...latest.data, ...nextPage.data],
+              }
+            : nextPage,
+        );
+        setUnreadCount(nextPage.unreadCount);
+      })
+      .catch(() => setLoadMoreError(true))
+      .finally(() => setIsLoadingMore(false));
+  }
+
+  function changePreference(
+    key: NotificationPreferenceKey,
+    enabled: boolean,
+  ): Promise<void> {
+    const current = preferences.data;
+    if (!current) return Promise.resolve();
+
+    const updated: NotificationPreferences = { ...current, [key]: enabled };
+    setPreferenceSaveError(false);
+    setIsSavingPreference(true);
+    preferences.setData(updated);
+
+    return updateNotificationPreferences(updated)
+      .then(preferences.setData)
+      .catch(() => {
+        preferences.setData(current);
+        setPreferenceSaveError(true);
+      })
+      .finally(() => setIsSavingPreference(false));
+  }
+
   return (
     <AppScreen
       title={t("notifications.title")}
       subtitle={t("notifications.subtitle")}
       back
-      refreshing={inbox.isRefreshing}
-      onRefresh={inbox.refresh}
+      refreshing={inbox.isRefreshing || preferences.isRefreshing}
+      onRefresh={() => {
+        inbox.refresh();
+        preferences.refresh();
+      }}
       action={
         inbox.data && inbox.data.unreadCount > 0 ? (
           <Button
@@ -94,6 +159,14 @@ export default function NotificationsScreen() {
         isRegistering={isRegistering}
         onEnable={() => void enablePushNotifications()}
         onOpenSettings={() => void Linking.openSettings()}
+      />
+      <NotificationPreferencesCard
+        preferences={preferences.data}
+        isLoading={preferences.isLoading}
+        isSaving={isSavingPreference}
+        hasError={Boolean(preferences.error) || preferenceSaveError}
+        onRetry={preferences.refresh}
+        onChange={(key, enabled) => void changePreference(key, enabled)}
       />
       {inbox.isLoading && !inbox.data ? (
         <ScreenState kind="loading" title={t("notifications.loading")} />
@@ -124,6 +197,23 @@ export default function NotificationsScreen() {
           />
         ))}
       </View>
+      {loadMoreError ? (
+        <Text variant="caption" className="text-center text-pink">
+          {t("notifications.loadMoreError")}
+        </Text>
+      ) : null}
+      {inbox.data && inbox.data.meta.currentPage < inbox.data.meta.lastPage ? (
+        <Button
+          label={
+            isLoadingMore
+              ? t("notifications.loadingMore")
+              : t("notifications.loadMore")
+          }
+          variant="light"
+          disabled={isLoadingMore}
+          onPress={() => void loadMore()}
+        />
+      ) : null}
     </AppScreen>
   );
 }

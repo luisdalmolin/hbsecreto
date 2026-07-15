@@ -71,6 +71,18 @@ const resources = {
         empty: "Nenhuma notificação por aqui.",
         emptyHint: "Quando algo importante acontecer, você verá aqui.",
         markAllRead: "Ler todas",
+        loadMore: "Carregar mais",
+        loadingMore: "Carregando…",
+        loadMoreError: "Não foi possível carregar mais notificações.",
+        preferences: {
+          title: "O que você quer receber",
+          description:
+            "Escolha quais avisos devem chegar por push. As novidades continuam disponíveis nesta tela.",
+          loading: "Carregando preferências…",
+          error: "Não foi possível carregar ou salvar suas preferências.",
+          conversationMessages: "Mensagens anônimas",
+          editionUpdates: "Sorteios e revelações",
+        },
         push: {
           channelName: "Notificações gerais",
           title: "Receba avisos no celular",

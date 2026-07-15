@@ -9,6 +9,7 @@ final readonly class ExpoPushContent
         public string $title,
         public string $body,
         public array $data,
+        public int $badge,
         public string $channelId = 'general',
     ) {}
 }

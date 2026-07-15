@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\GroupController;
 use App\Http\Controllers\Api\V1\GroupMemberController;
 use App\Http\Controllers\Api\V1\InvitationController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\PushDeviceController;
 use App\Http\Controllers\Api\V1\WishController;
 use App\Http\Middleware\SetUserLocale;
@@ -35,6 +36,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
         Route::put('notifications/read', [NotificationController::class, 'readAll'])->name('notifications.read_all');
         Route::put('notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
+        Route::get('notification-preferences', [NotificationPreferenceController::class, 'show'])->name('notification_preferences.show');
+        Route::put('notification-preferences', [NotificationPreferenceController::class, 'update'])->name('notification_preferences.update');
         Route::post('push-devices', [PushDeviceController::class, 'store'])->middleware('throttle:60,1')->name('push_devices.store');
         Route::delete('push-devices/{pushDevice}', [PushDeviceController::class, 'destroy'])->name('push_devices.destroy');
         Route::get('groups', [GroupController::class, 'index'])->name('groups.index');

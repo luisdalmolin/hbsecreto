@@ -40,6 +40,11 @@ return [
         'access_token' => env('EXPO_ACCESS_TOKEN', ''),
         'timeout' => (int) env('EXPO_PUSH_TIMEOUT', 10),
         'connect_timeout' => (int) env('EXPO_PUSH_CONNECT_TIMEOUT', 3),
+        'receipt_delay_minutes' => (int) env('EXPO_PUSH_RECEIPT_DELAY_MINUTES', 15),
+        'receipt_retry_minutes' => (int) env('EXPO_PUSH_RECEIPT_RETRY_MINUTES', 5),
+        'receipt_expiry_hours' => (int) env('EXPO_PUSH_RECEIPT_EXPIRY_HOURS', 24),
+        'stale_device_days' => (int) env('EXPO_PUSH_STALE_DEVICE_DAYS', 90),
+        'delivery_retention_days' => (int) env('EXPO_PUSH_DELIVERY_RETENTION_DAYS', 30),
     ],
 
 ];

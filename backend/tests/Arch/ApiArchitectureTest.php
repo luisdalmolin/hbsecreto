@@ -7,6 +7,7 @@ use App\Models\Edition;
 use App\Models\EditionParticipant;
 use App\Models\Group;
 use App\Models\GroupMember;
+use App\Models\NotificationPreference;
 use App\Models\PushDevice;
 use App\Models\Wish;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
@@ -45,6 +46,7 @@ arch('core tenant models declare their policies explicitly')
         Edition::class,
         EditionParticipant::class,
         Conversation::class,
+        NotificationPreference::class,
         PushDevice::class,
         Wish::class,
     ])
