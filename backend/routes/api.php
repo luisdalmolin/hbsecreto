@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AssignmentController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\DrawConstraintController;
 use App\Http\Controllers\Api\V1\DrawController;
 use App\Http\Controllers\Api\V1\EditionController;
@@ -64,6 +65,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('groups/{group}/editions/{edition}/draw', [DrawController::class, 'store'])->name('groups.editions.draw.store');
             Route::get('groups/{group}/editions/{edition}/my-assignment', [AssignmentController::class, 'mine'])->name('groups.editions.my_assignment.show');
             Route::get('groups/{group}/editions/{edition}/assignments', [AssignmentController::class, 'index'])->name('groups.editions.assignments.index');
+            Route::get('groups/{group}/editions/{edition}/conversations', [ConversationController::class, 'index'])->name('groups.editions.conversations.index');
+            Route::get('groups/{group}/editions/{edition}/conversations/{conversation}/messages', [ConversationController::class, 'messages'])->name('groups.editions.conversations.messages.index');
+            Route::post('groups/{group}/editions/{edition}/conversations/{conversation}/messages', [ConversationController::class, 'store'])->middleware('throttle:messages')->name('groups.editions.conversations.messages.store');
+            Route::put('groups/{group}/editions/{edition}/conversations/{conversation}/read', [ConversationController::class, 'read'])->name('groups.editions.conversations.read');
             Route::get('groups/{group}/editions/{edition}/my-wishes', [WishController::class, 'index'])->name('groups.editions.my_wishes.index');
             Route::post('groups/{group}/editions/{edition}/my-wishes', [WishController::class, 'store'])->name('groups.editions.my_wishes.store');
             Route::put('groups/{group}/editions/{edition}/my-wishes/order', [WishController::class, 'reorder'])->name('groups.editions.my_wishes.reorder');

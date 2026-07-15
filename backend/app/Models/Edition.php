@@ -74,6 +74,12 @@ class Edition extends Model
         return $this->hasMany(Assignment::class);
     }
 
+    /** @return HasMany<Conversation, $this> */
+    public function conversations(): HasMany
+    {
+        return $this->hasMany(Conversation::class);
+    }
+
     /** @return HasManyThrough<Wish, EditionParticipant, $this> */
     public function wishes(): HasManyThrough
     {

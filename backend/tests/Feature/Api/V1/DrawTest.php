@@ -2,6 +2,7 @@
 
 use App\Enums\EditionStatus;
 use App\Models\Assignment;
+use App\Models\Conversation;
 use App\Models\DrawConstraint;
 use App\Models\Edition;
 use App\Models\EditionParticipant;
@@ -147,6 +148,7 @@ test('draw is atomic, private, and sequentially idempotent', function (): void {
         ->assertJsonMissingPath('penalty');
 
     expect(Assignment::query()->whereBelongsTo($this->edition)->count())->toBe(4)
+        ->and(Conversation::query()->whereBelongsTo($this->edition)->count())->toBe(4)
         ->and($this->edition->refresh()->status)->toBe(EditionStatus::Drawn)
         ->and($this->edition->drawn_at)->not->toBeNull();
 
@@ -155,7 +157,8 @@ test('draw is atomic, private, and sequentially idempotent', function (): void {
         ->assertCreated();
 
     expect($second->json())->toBe($first->json())
-        ->and(Assignment::query()->whereBelongsTo($this->edition)->orderBy('id')->get()->toArray())->toBe($mapping);
+        ->and(Assignment::query()->whereBelongsTo($this->edition)->orderBy('id')->get()->toArray())->toBe($mapping)
+        ->and(Conversation::query()->whereBelongsTo($this->edition)->count())->toBe(4);
 });
 
 test('performed draw honors an administrator forced pair', function (): void {

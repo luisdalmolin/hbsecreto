@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 import { IconButton, Text } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import { palette } from "@/theme/tokens";
 
 interface AppScreenProps extends PropsWithChildren {
@@ -30,7 +31,7 @@ export function AppScreen({
 }: AppScreenProps) {
   const { t } = useTranslation();
   const content = (
-    <View className="gap-4 px-[18px] pb-10 pt-3">
+    <View className={cn("gap-4 px-[18px] pb-10 pt-3", !scroll && "flex-1")}>
       <View className="flex-row items-center gap-3">
         {back ? (
           <IconButton

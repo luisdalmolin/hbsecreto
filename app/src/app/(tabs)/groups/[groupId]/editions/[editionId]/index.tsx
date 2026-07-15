@@ -1,5 +1,13 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { Eye, Gift, Heart, List, Shuffle, Users } from "lucide-react-native";
+import {
+  Eye,
+  Gift,
+  Heart,
+  List,
+  MessageCircle,
+  Shuffle,
+  Users,
+} from "lucide-react-native";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, View } from "react-native";
@@ -257,6 +265,20 @@ export default function EditionDetailScreen() {
               })
             }
           />
+          {isParticipant ? (
+            <Button
+              label={t("chat.open")}
+              variant="light"
+              leftIcon={<MessageCircle color={palette.mintDeep} size={18} />}
+              onPress={() =>
+                router.push({
+                  pathname:
+                    "/groups/[groupId]/editions/[editionId]/conversations",
+                  params: routeParams,
+                })
+              }
+            />
+          ) : null}
           {edition.status === "revealed" || edition.status === "archived" ? (
             <Button
               label={t("editions.allAssignments")}

@@ -54,8 +54,6 @@ function RootNavigator() {
       </Stack.Protected>
       <Stack.Protected guard={Boolean(user)}>
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="groups" />
-        <Stack.Screen name="profile/edit" />
       </Stack.Protected>
       <Stack.Screen name="invites/[token]" />
     </Stack>

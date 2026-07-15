@@ -2,6 +2,7 @@
 
 namespace App\Actions\Draws;
 
+use App\Actions\Conversations\CreateAssignmentConversations;
 use App\Draws\DrawConflictException;
 use App\Draws\DrawFailure;
 use App\Draws\DrawFailureCode;
@@ -20,6 +21,7 @@ final readonly class PerformDraw
     public function __construct(
         private BuildDrawInput $buildInput,
         private EditionTypeRegistry $registry,
+        private CreateAssignmentConversations $createConversations,
     ) {}
 
     public function handle(Edition $edition, ?int $seed = null): Edition
@@ -37,6 +39,8 @@ final readonly class PerformDraw
             if ($existing->isNotEmpty()) {
                 if ($this->isComplete($participants, $existing)
                     && in_array($lockedEdition->status, [EditionStatus::Drawn, EditionStatus::Revealed, EditionStatus::Archived], true)) {
+                    $this->createConversations->handle($lockedEdition);
+
                     return $lockedEdition;
                 }
 
@@ -70,6 +74,7 @@ final readonly class PerformDraw
                 ],
                 $result->pairs,
             ));
+            $this->createConversations->handle($lockedEdition);
             $lockedEdition->update(['status' => EditionStatus::Drawn, 'drawn_at' => $timestamp]);
 
             return $lockedEdition->refresh();

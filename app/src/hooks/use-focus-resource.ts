@@ -1,5 +1,5 @@
 import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export interface FocusResource<T> {
   data: T | undefined;
@@ -20,47 +20,46 @@ export function useFocusResource<T>(
   const [refreshKey, setRefreshKey] = useState(0);
   const hasData = useRef(false);
   const loadRef = useRef(load);
+  const refresh = () => setRefreshKey((value) => value + 1);
 
   useEffect(() => {
     loadRef.current = load;
   }, [load]);
 
-  useFocusEffect(
-    useCallback(() => {
-      void refreshKey;
-      const controller = new AbortController();
+  useFocusEffect(() => {
+    void refreshKey;
+    const controller = new AbortController();
 
-      if (hasData.current) setIsRefreshing(true);
-      else setIsLoading(true);
+    if (hasData.current) setIsRefreshing(true);
+    else setIsLoading(true);
 
-      setError(undefined);
-      void loadRef
-        .current(controller.signal)
-        .then((value) => {
-          if (controller.signal.aborted) return;
-          hasData.current = true;
-          setData(value);
-        })
-        .catch((exception: unknown) => {
-          if (!controller.signal.aborted) setError(exception);
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) {
-            setIsLoading(false);
-            setIsRefreshing(false);
-          }
-        });
+    setError(undefined);
+    void loadRef
+      .current(controller.signal)
+      .then((value) => {
+        if (controller.signal.aborted) return;
+        hasData.current = true;
+        setData(value);
+      })
+      .catch((exception: unknown) => {
+        if (!controller.signal.aborted) setError(exception);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+          setIsRefreshing(false);
+        }
+      });
 
-      return () => controller.abort();
-    }, [refreshKey]),
-  );
+    return () => controller.abort();
+  });
 
   return {
     data,
     error,
     isLoading,
     isRefreshing,
-    refresh: () => setRefreshKey((value) => value + 1),
+    refresh,
     setData,
   };
 }

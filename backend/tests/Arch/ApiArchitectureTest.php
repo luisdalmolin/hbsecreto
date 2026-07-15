@@ -2,6 +2,7 @@
 
 use App\Draws\ClassicDrawAlgorithm;
 use App\Draws\DrawAlgorithm;
+use App\Models\Conversation;
 use App\Models\Edition;
 use App\Models\EditionParticipant;
 use App\Models\Group;
@@ -42,6 +43,7 @@ arch('core tenant models declare their policies explicitly')
         GroupMember::class,
         Edition::class,
         EditionParticipant::class,
+        Conversation::class,
         Wish::class,
     ])
     ->toHaveAttribute(UsePolicy::class);
@@ -50,6 +52,7 @@ arch('domain orchestration actions are final')
     ->expect('App\\Actions\\Groups')
     ->and('App\\Actions\\Editions')
     ->and('App\\Actions\\Wishes')
+    ->and('App\\Actions\\Conversations')
     ->classes()
     ->toBeFinal();
 
