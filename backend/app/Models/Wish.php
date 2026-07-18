@@ -15,12 +15,14 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $edition_participant_id
  * @property string $description
+ * @property int|null $product_id
  * @property int $sort_order
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read EditionParticipant|null $editionParticipant
+ * @property-read Product|null $product
  */
-#[Fillable(['edition_participant_id', 'description', 'sort_order'])]
+#[Fillable(['edition_participant_id', 'description', 'product_id', 'sort_order'])]
 #[UsePolicy(WishPolicy::class)]
 class Wish extends Model
 {
@@ -31,6 +33,12 @@ class Wish extends Model
     public function editionParticipant(): BelongsTo
     {
         return $this->belongsTo(EditionParticipant::class);
+    }
+
+    /** @return BelongsTo<Product, $this> */
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
     }
 
     protected function casts(): array

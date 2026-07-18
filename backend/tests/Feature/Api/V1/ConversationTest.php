@@ -64,6 +64,9 @@ beforeEach(function (): void {
         'edition_id' => $this->edition->id,
         'assignment_id' => $outgoingAssignment->id,
     ]);
+    $this->editionConversation = Conversation::factory()->edition()->create([
+        'edition_id' => $this->edition->id,
+    ]);
     $this->incomingMessage = Message::factory()->create([
         'conversation_id' => $this->incoming->id,
         'sender_edition_participant_id' => $this->giverParticipant->id,
@@ -82,29 +85,33 @@ afterEach(function (): void {
     Carbon::setTestNow();
 });
 
-test('participants see their two assignment conversations without giver identity leakage', function (): void {
+test('participants see edition and assignment conversations without giver identity leakage', function (): void {
     $response = $this->getJson($this->url)
         ->assertOk()
-        ->assertJsonCount(2, 'data')
-        ->assertJsonPath('data.0.role', 'receiver')
-        ->assertJsonPath('data.0.counterpart.anonymous', true)
-        ->assertJsonPath('data.0.counterpart.displayName', null)
-        ->assertJsonPath('data.0.unreadCount', 1)
-        ->assertJsonPath('data.1.role', 'giver')
-        ->assertJsonPath('data.1.counterpart.anonymous', false)
-        ->assertJsonPath('data.1.counterpart.displayName', 'Carla');
+        ->assertJsonCount(3, 'data')
+        ->assertJsonPath('data.0.type', 'edition')
+        ->assertJsonPath('data.0.role', 'member')
+        ->assertJsonPath('data.0.counterpart', null)
+        ->assertJsonPath('data.1.role', 'receiver')
+        ->assertJsonPath('data.1.counterpart.anonymous', true)
+        ->assertJsonPath('data.1.counterpart.displayName', null)
+        ->assertJsonPath('data.1.unreadCount', 1)
+        ->assertJsonPath('data.2.role', 'giver')
+        ->assertJsonPath('data.2.counterpart.anonymous', false)
+        ->assertJsonPath('data.2.counterpart.displayName', 'Carla');
 
     expect(json_encode($response->json(), JSON_THROW_ON_ERROR))->not->toContain('Bruno');
 });
 
-test('conversation messages expose ownership but never sender identity', function (): void {
+test('assignment messages expose only an anonymous author before reveal', function (): void {
     $response = $this->getJson("{$this->url}/{$this->incoming->id}/messages")
         ->assertOk()
         ->assertJsonCount(2, 'messages')
         ->assertJsonPath('messages.0.id', $this->incomingMessage->id)
         ->assertJsonPath('messages.0.isMine', false)
+        ->assertJsonPath('messages.0.author.anonymous', true)
+        ->assertJsonPath('messages.0.author.displayName', null)
         ->assertJsonPath('messages.1.isMine', true)
-        ->assertJsonMissingPath('messages.0.sender')
         ->assertJsonMissingPath('messages.0.senderId');
 
     expect(json_encode($response->json(), JSON_THROW_ON_ERROR))->not->toContain('Bruno');
@@ -124,6 +131,29 @@ test('both sides can send trimmed messages', function (): void {
     $this->postJson("{$this->url}/{$this->incoming->id}/messages", ['body' => 'Combinado!'])
         ->assertCreated()
         ->assertJsonPath('isMine', true);
+});
+
+test('edition chat is available before the draw and identifies message authors', function (): void {
+    $this->edition->update(['status' => EditionStatus::Open, 'drawn_at' => null]);
+
+    Sanctum::actingAs($this->giver);
+    $created = $this->postJson("{$this->url}/{$this->editionConversation->id}/messages", [
+        'body' => '  O encontro continua às oito?  ',
+    ])->assertCreated()
+        ->assertJsonPath('body', 'O encontro continua às oito?')
+        ->assertJsonPath('author.anonymous', false)
+        ->assertJsonPath('author.displayName', 'Bruno')
+        ->json('id');
+
+    Sanctum::actingAs($this->owner);
+    $this->getJson("{$this->url}/{$this->editionConversation->id}/messages")
+        ->assertOk()
+        ->assertJsonPath('conversation.type', 'edition')
+        ->assertJsonPath('conversation.role', 'member')
+        ->assertJsonPath('conversation.canSend', true)
+        ->assertJsonPath('messages.0.id', $created)
+        ->assertJsonPath('messages.0.author.displayName', 'Bruno')
+        ->assertJsonPath('messages.0.author.anonymous', false);
 });
 
 test('a message notifies only the counterpart without leaking message content', function (): void {
@@ -147,6 +177,17 @@ test('a message notifies only the counterpart without leaking message content', 
     Notification::assertNotSentTo($this->receiver, ConversationMessageNotification::class);
 });
 
+test('an edition message notifies the other active participants', function (): void {
+    Notification::fake();
+
+    $this->postJson("{$this->url}/{$this->editionConversation->id}/messages", [
+        'body' => 'Mensagem para todo o grupo.',
+    ])->assertCreated();
+
+    Notification::assertSentTo([$this->giver, $this->receiver], ConversationMessageNotification::class);
+    Notification::assertNotSentTo([$this->owner, $this->admin], ConversationMessageNotification::class);
+});
+
 test('message bodies require non-whitespace text within the length limit', function (): void {
     $endpoint = "{$this->url}/{$this->incoming->id}/messages";
 
@@ -162,7 +203,7 @@ test('read tracking clears unread messages and counts only newer counterpart mes
     $this->putJson("{$this->url}/{$this->incoming->id}/read", [
         'messageId' => $this->incoming->messages()->latest('id')->value('id'),
     ])->assertNoContent();
-    $this->getJson($this->url)->assertJsonPath('data.0.unreadCount', 0);
+    $this->getJson($this->url)->assertJsonPath('data.1.unreadCount', 0);
 
     Carbon::setTestNow('2026-12-01 12:01:00');
     Message::factory()->create([
@@ -176,7 +217,7 @@ test('read tracking clears unread messages and counts only newer counterpart mes
         'body' => 'Minha resposta não conta como não lida.',
     ]);
 
-    $this->getJson($this->url)->assertJsonPath('data.0.unreadCount', 1);
+    $this->getJson($this->url)->assertJsonPath('data.1.unreadCount', 1);
     expect(ConversationRead::query()->whereBelongsTo($this->incoming)->whereBelongsTo($this->ownerParticipant, 'editionParticipant')->exists())->toBeTrue();
 });
 
@@ -193,15 +234,36 @@ test('read tracking never consumes a message that arrived after the rendered thr
         'messageId' => $lastRenderedMessageId,
     ])->assertNoContent();
 
-    $this->getJson($this->url)->assertJsonPath('data.0.unreadCount', 1);
+    $this->getJson($this->url)->assertJsonPath('data.1.unreadCount', 1);
+});
+
+test('read tracking never moves the cursor backwards for a stale client', function (): void {
+    Carbon::setTestNow('2026-12-01 12:01:00');
+    $newerMessage = Message::factory()->create([
+        'conversation_id' => $this->incoming->id,
+        'sender_edition_participant_id' => $this->giverParticipant->id,
+        'body' => 'Mensagem mais recente.',
+    ]);
+
+    $endpoint = "{$this->url}/{$this->incoming->id}/read";
+    $this->putJson($endpoint, ['messageId' => $newerMessage->id])->assertNoContent();
+    $this->putJson($endpoint, ['messageId' => $this->incomingMessage->id])->assertNoContent();
+
+    $read = ConversationRead::query()
+        ->whereBelongsTo($this->incoming)
+        ->whereBelongsTo($this->ownerParticipant, 'editionParticipant')
+        ->firstOrFail();
+
+    expect($read->last_read_at->equalTo($newerMessage->created_at))->toBeTrue();
+    $this->getJson($this->url)->assertJsonPath('data.1.unreadCount', 0);
 });
 
 test('reveal unmasks the giver while archived conversations remain read only', function (): void {
     $this->edition->update(['status' => EditionStatus::Revealed, 'revealed_at' => now()]);
     $this->getJson($this->url)
-        ->assertJsonPath('data.0.counterpart.anonymous', false)
-        ->assertJsonPath('data.0.counterpart.displayName', 'Bruno')
-        ->assertJsonPath('data.0.canSend', true);
+        ->assertJsonPath('data.1.counterpart.anonymous', false)
+        ->assertJsonPath('data.1.counterpart.displayName', 'Bruno')
+        ->assertJsonPath('data.1.canSend', true);
 
     $this->edition->update(['status' => EditionStatus::Archived]);
     $this->getJson("{$this->url}/{$this->incoming->id}/messages")

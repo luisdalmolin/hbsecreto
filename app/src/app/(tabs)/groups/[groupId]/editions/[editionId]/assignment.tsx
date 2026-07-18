@@ -1,15 +1,17 @@
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Eye, Gift, Heart } from "lucide-react-native";
+import { ExternalLink, Eye, Gift, Heart } from "lucide-react-native";
 import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, View } from "react-native";
 
 import { getMyAssignment } from "@/api/generated/assignments/assignments";
-import type { MyAssignment } from "@/api/generated/models";
+import type { MyAssignment, Product } from "@/api/generated/models";
 import { AppScreen } from "@/components/common/app-screen";
 import { ScreenState } from "@/components/common/screen-state";
+import { ProductDetails } from "@/components/wishes/product-details";
 import { Button, Card, Text } from "@/components/ui";
 import { apiErrorMessage, parseRouteId } from "@/features/shared/presentation";
+import { openProduct } from "@/features/products/open-product";
 import { palette } from "@/theme/tokens";
 
 export default function MyAssignmentScreen() {
@@ -20,6 +22,7 @@ export default function MyAssignmentScreen() {
   const [assignment, setAssignment] = useState<MyAssignment>();
   const [error, setError] = useState<unknown>();
   const [revealing, setRevealing] = useState(false);
+  const [productLinkError, setProductLinkError] = useState<string>();
   const requestRef = useRef<AbortController | undefined>(undefined);
 
   useFocusEffect(
@@ -30,6 +33,7 @@ export default function MyAssignmentScreen() {
         setAssignment(undefined);
         setError(undefined);
         setRevealing(false);
+        setProductLinkError(undefined);
       },
       [],
     ),
@@ -59,6 +63,12 @@ export default function MyAssignmentScreen() {
       requestRef.current = undefined;
       setRevealing(false);
     }
+  }
+
+  async function openProductLink(product: Product): Promise<void> {
+    setProductLinkError(undefined);
+    const opened = await openProduct(product);
+    if (!opened) setProductLinkError(t("products.openError"));
   }
 
   return (
@@ -136,18 +146,43 @@ export default function MyAssignmentScreen() {
             <ScreenState kind="empty" title={t("assignments.wishesEmpty")} />
           ) : (
             <View className="gap-3">
-              {assignment.wishes.map((wish, index) => (
-                <Card key={wish.id} className="flex-row items-start gap-3 p-4">
-                  <View className="h-7 w-7 items-center justify-center rounded-full bg-mint-tint">
-                    <Text variant="label" className="text-mint-deep">
-                      {index + 1}
-                    </Text>
-                  </View>
-                  <Text className="flex-1">{wish.description}</Text>
-                </Card>
-              ))}
+              {assignment.wishes.map((wish, index) => {
+                const product = wish.product;
+
+                return (
+                  <Card key={wish.id} className="gap-3 p-4">
+                    <View className="flex-row items-start gap-3">
+                      <View className="h-7 w-7 items-center justify-center rounded-full bg-mint-tint">
+                        <Text variant="label" className="text-mint-deep">
+                          {index + 1}
+                        </Text>
+                      </View>
+                      <Text className="flex-1">{wish.description}</Text>
+                    </View>
+                    {product ? (
+                      <View className="gap-3 rounded-tile bg-cloud/70 p-3">
+                        <ProductDetails product={product} />
+                        <Button
+                          label={t("products.open")}
+                          variant="light"
+                          size="sm"
+                          leftIcon={
+                            <ExternalLink color={palette.mintDeep} size={16} />
+                          }
+                          onPress={() => void openProductLink(product)}
+                        />
+                      </View>
+                    ) : null}
+                  </Card>
+                );
+              })}
             </View>
           )}
+          {productLinkError ? (
+            <Text className="text-pink-deep" accessibilityRole="alert">
+              {productLinkError}
+            </Text>
+          ) : null}
         </>
       ) : null}
     </AppScreen>

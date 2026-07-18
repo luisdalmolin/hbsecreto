@@ -11,5 +11,6 @@ return [
         'corrupt_assignments' => 'O resultado existente do sorteio está incompleto ou inconsistente.',
         'assignment_not_available' => 'Seu amigo secreto ainda não está disponível.',
         'assignments_not_revealed' => 'Os resultados completos ainda não foram revelados.',
+        'pending_payment' => 'Existe um pagamento em processamento. Aguarde a confirmação antes de realizar o sorteio.',
     ],
 ];

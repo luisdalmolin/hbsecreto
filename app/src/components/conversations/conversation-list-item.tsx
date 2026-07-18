@@ -1,4 +1,9 @@
-import { ChevronRight, Gift, MessageCircleQuestion } from "lucide-react-native";
+import {
+  ChevronRight,
+  Gift,
+  MessageCircleQuestion,
+  Users,
+} from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { Pressable, View } from "react-native";
 
@@ -21,6 +26,7 @@ export function ConversationListItem({
   onPress,
 }: ConversationListItemProps) {
   const { t, i18n } = useTranslation();
+  const isEdition = conversation.type === "edition";
   const isGiver = conversation.role === "giver";
   const activity = formatConversationActivity(
     conversation.lastMessageAt,
@@ -38,10 +44,16 @@ export function ConversationListItem({
         <View
           className={cn(
             "h-12 w-12 items-center justify-center rounded-tile",
-            isGiver ? "bg-mint-tint" : "bg-pink-tint",
+            isEdition
+              ? "bg-mint-tint"
+              : isGiver
+                ? "bg-mint-tint"
+                : "bg-pink-tint",
           )}
         >
-          {isGiver ? (
+          {isEdition ? (
+            <Users color={palette.mintDeep} size={24} />
+          ) : isGiver ? (
             <Gift color={palette.mint} size={24} />
           ) : (
             <MessageCircleQuestion color={palette.pink} size={24} />
@@ -50,7 +62,13 @@ export function ConversationListItem({
         <View className="flex-1 gap-0.5">
           <Text variant="cardTitle">{conversationTitle(conversation, t)}</Text>
           <Text variant="caption">
-            {t(isGiver ? "chat.personYouDrew" : "chat.yourSecretSanta")}
+            {t(
+              isEdition
+                ? "chat.groupConversationHint"
+                : isGiver
+                  ? "chat.personYouDrew"
+                  : "chat.yourSecretSanta",
+            )}
           </Text>
           <Text variant="caption">
             {activity

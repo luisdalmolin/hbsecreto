@@ -6,6 +6,14 @@ export function conversationTitle(
   conversation: Conversation,
   t: TFunction,
 ): string {
+  if (conversation.type === "edition") {
+    return t("chat.groupConversation");
+  }
+
+  if (!conversation.counterpart) {
+    return t("chat.unknownParticipant");
+  }
+
   if (conversation.counterpart.anonymous) {
     return t("chat.secretSanta");
   }

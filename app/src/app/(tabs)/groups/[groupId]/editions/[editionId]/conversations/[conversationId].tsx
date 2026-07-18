@@ -1,6 +1,6 @@
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Send } from "lucide-react-native";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
@@ -46,27 +46,30 @@ export default function ConversationThreadScreen() {
   const [sendError, setSendError] = useState<unknown>();
   const [sending, setSending] = useState(false);
   const mounted = useMountedRef();
-  const load = async (signal: AbortSignal) => {
-    if (!groupId || !editionId || !conversationId) {
-      throw new Error(t("common.errors.notFound"));
-    }
+  const load = useCallback(
+    async (signal: AbortSignal) => {
+      if (!groupId || !editionId || !conversationId) {
+        throw new Error(t("common.errors.notFound"));
+      }
 
-    const thread = await getConversationMessages(
-      groupId,
-      editionId,
-      conversationId,
-      { signal },
-    );
-    await markConversationRead(
-      groupId,
-      editionId,
-      conversationId,
-      { messageId: thread.messages[thread.messages.length - 1]?.id ?? null },
-      { signal },
-    );
+      const thread = await getConversationMessages(
+        groupId,
+        editionId,
+        conversationId,
+        { signal },
+      );
+      await markConversationRead(
+        groupId,
+        editionId,
+        conversationId,
+        { messageId: thread.messages[thread.messages.length - 1]?.id ?? null },
+        { signal },
+      );
 
-    return thread;
-  };
+      return thread;
+    },
+    [conversationId, editionId, groupId, t],
+  );
   const resource = useFocusResource(load);
 
   useFocusEffect(() => {
@@ -119,9 +122,11 @@ export default function ConversationThreadScreen() {
     : t("chat.title");
   const subtitle = resource.data
     ? t(
-        resource.data.conversation.role === "giver"
-          ? "chat.personYouDrew"
-          : "chat.yourSecretSanta",
+        resource.data.conversation.type === "edition"
+          ? "chat.groupConversationHint"
+          : resource.data.conversation.role === "giver"
+            ? "chat.personYouDrew"
+            : "chat.yourSecretSanta",
       )
     : undefined;
 
@@ -142,7 +147,7 @@ export default function ConversationThreadScreen() {
           className="flex-1 gap-3"
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          {resource.data.conversation.counterpart.anonymous ? (
+          {resource.data.conversation.counterpart?.anonymous ? (
             <Card
               className="border border-pink-tint bg-pink-tint p-3"
               shadow="none"

@@ -1,10 +1,11 @@
-import { AlertCircle, CheckCircle2, Plus } from "lucide-react-native";
+import { AlertCircle, CheckCircle2, Copy, Plus } from "lucide-react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Alert, View } from "react-native";
 
 import {
+  copyDrawConstraintsFromPreviousEdition,
   createDrawConstraint,
   deleteDrawConstraint,
   listDrawConstraints,
@@ -50,7 +51,7 @@ export default function DrawConstraintsScreen() {
   const editionId = parseRouteId(params.editionId);
   const [firstParticipantId, setFirstParticipantId] = useState<number>();
   const [secondParticipantId, setSecondParticipantId] = useState<number>();
-  const [mutation, setMutation] = useState<"creating" | number>();
+  const [mutation, setMutation] = useState<"creating" | "copying" | number>();
   const [mutationError, setMutationError] = useState<unknown>();
   const mounted = useMountedRef();
 
@@ -147,6 +148,40 @@ export default function DrawConstraintsScreen() {
       setFirstParticipantId(undefined);
       setSecondParticipantId(undefined);
       await refreshReadiness(constraints);
+    } catch (error) {
+      if (mounted.current) setMutationError(error);
+    }
+    if (mounted.current) setMutation(undefined);
+  }
+
+  async function copyPreviousExclusions(): Promise<void> {
+    if (!groupId || !editionId || mutation) return;
+    setMutation("copying");
+    setMutationError(undefined);
+    try {
+      const result = await copyDrawConstraintsFromPreviousEdition(
+        groupId,
+        editionId,
+      );
+      if (!mounted.current) return;
+      const constraints = [
+        ...result.data,
+        ...(resource.data?.constraints ?? []),
+      ];
+      await refreshReadiness(constraints);
+      if (!mounted.current) return;
+      Alert.alert(
+        t("draw.constraints.copyResultTitle"),
+        result.sourceEditionId === null
+          ? t("draw.constraints.copyNoPrevious")
+          : t("draw.constraints.copyResultBody", {
+              copied: result.copiedCount,
+              skipped:
+                result.skippedMissingParticipants +
+                result.skippedDuplicates +
+                result.skippedConflicts,
+            }),
+      );
     } catch (error) {
       if (mounted.current) setMutationError(error);
     }
@@ -276,6 +311,32 @@ export default function DrawConstraintsScreen() {
           />
         </Card>
       )}
+
+      {isEditable ? (
+        <Card className="gap-3 border border-hairline p-5">
+          <View className="gap-1">
+            <Text variant="cardTitle">{t("draw.constraints.copyTitle")}</Text>
+            <Text variant="caption">{t("draw.constraints.copyHint")}</Text>
+          </View>
+          <Button
+            label={
+              mutation === "copying"
+                ? t("draw.constraints.copying")
+                : t("draw.constraints.copy")
+            }
+            variant="light"
+            leftIcon={
+              mutation === "copying" ? (
+                <ActivityIndicator color={palette.mintDeep} />
+              ) : (
+                <Copy color={palette.mintDeep} size={18} />
+              )
+            }
+            disabled={Boolean(mutation)}
+            onPress={() => void copyPreviousExclusions()}
+          />
+        </Card>
+      ) : null}
 
       {isEditable ? (
         <ReadinessCard readiness={resource.data.readiness} />

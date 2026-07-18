@@ -7,10 +7,12 @@ use App\Draws\DrawFailureCode;
 use App\Enums\DrawConstraintSource;
 use App\Enums\DrawConstraintType;
 use App\Enums\EditionStatus;
+use App\Enums\OrderStatus;
 use App\Models\DrawConstraint;
 use App\Models\Edition;
 use App\Models\EditionParticipant;
 use App\Models\Group;
+use App\Models\Order;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -44,9 +46,15 @@ final class CreateDrawConstraint
             }
 
             $lockedEdition->participants()->orderBy('id')->lockForUpdate()->get();
-            $constraints = $lockedEdition->drawConstraints()->orderBy('id')->lockForUpdate()->get();
+            $constraints = $lockedEdition->drawConstraints()->with('order')->orderBy('id')->lockForUpdate()->get();
 
             foreach ($constraints as $constraint) {
+                if ($constraint->source === DrawConstraintSource::Purchase
+                    && $constraint->order instanceof Order
+                    && in_array($constraint->order->status, [OrderStatus::Failed, OrderStatus::Refunded], true)) {
+                    continue;
+                }
+
                 $sameDirection = $constraint->giver_edition_participant_id === $giver->id
                     && $constraint->receiver_edition_participant_id === $receiver->id;
                 $reverseDirection = $constraint->giver_edition_participant_id === $receiver->id

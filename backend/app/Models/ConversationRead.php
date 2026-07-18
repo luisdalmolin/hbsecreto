@@ -11,13 +11,14 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
+ * @property int $edition_id
  * @property int $conversation_id
  * @property int $edition_participant_id
  * @property Carbon $last_read_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['conversation_id', 'edition_participant_id', 'last_read_at'])]
+#[Fillable(['edition_id', 'conversation_id', 'edition_participant_id', 'last_read_at'])]
 class ConversationRead extends Model
 {
     /** @use HasFactory<ConversationReadFactory> */

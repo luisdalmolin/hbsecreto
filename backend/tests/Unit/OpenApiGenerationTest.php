@@ -25,6 +25,7 @@ test('generates a valid OpenAPI 3.1 document with bearer authentication', functi
             '/api/v1/auth/login',
             '/api/v1/auth/logout',
             '/api/v1/me',
+            '/api/v1/dashboard',
             '/api/v1/notification-preferences',
             '/api/v1/notifications',
             '/api/v1/notifications/read',
@@ -45,17 +46,31 @@ test('generates a valid OpenAPI 3.1 document with bearer authentication', functi
             '/api/v1/groups/{group}/editions/{edition}/reveal',
             '/api/v1/groups/{group}/editions/{edition}/archive',
             '/api/v1/groups/{group}/editions/{edition}/draw-constraints',
+            '/api/v1/groups/{group}/editions/{edition}/draw-constraints/copy-from-previous',
             '/api/v1/groups/{group}/editions/{edition}/draw-constraints/{drawConstraint}',
             '/api/v1/groups/{group}/editions/{edition}/draw/preflight',
             '/api/v1/groups/{group}/editions/{edition}/draw',
             '/api/v1/groups/{group}/editions/{edition}/my-assignment',
             '/api/v1/groups/{group}/editions/{edition}/assignments',
+            '/api/v1/groups/{group}/editions/{edition}/conversations',
+            '/api/v1/groups/{group}/editions/{edition}/conversations/{conversation}/messages',
+            '/api/v1/groups/{group}/editions/{edition}/conversations/{conversation}/read',
+            '/api/v1/groups/{group}/editions/{edition}/products/search',
             '/api/v1/groups/{group}/editions/{edition}/my-wishes',
             '/api/v1/groups/{group}/editions/{edition}/my-wishes/order',
             '/api/v1/groups/{group}/editions/{edition}/my-wishes/{wish}',
+            '/api/v1/groups/{group}/editions/{edition}/pick-orders',
+            '/api/v1/orders',
+            '/api/v1/orders/{order}',
+            '/api/v1/orders/{order}/refund',
+            '/api/v1/payments/mercadopago/webhook',
         ])
         ->and($document['components']['schemas'])->toHaveKeys([
             'Authentication',
+            'Dashboard',
+            'DashboardEdition',
+            'DashboardGroup',
+            'CopiedDrawConstraints',
             'Error',
             'LoginRequest',
             'NotificationPreferences',
@@ -81,11 +96,26 @@ test('generates a valid OpenAPI 3.1 document with bearer authentication', functi
             'MyAssignment',
             'Assignment',
             'AssignmentCollection',
+            'Conversation',
+            'ConversationCollection',
+            'ConversationCounterpart',
+            'ConversationThread',
+            'CreateMessageRequest',
+            'MarkConversationReadRequest',
+            'Message',
+            'MessageAuthor',
+            'Product',
+            'ProductCollection',
             'CreateWishRequest',
             'UpdateWishRequest',
             'ReorderWishesRequest',
             'Wish',
             'WishCollection',
+            'CreatePickOrderRequest',
+            'MercadoPagoWebhook',
+            'MercadoPagoWebhookResource',
+            'Order',
+            'OrderCollection',
         ])
         ->and($document['components']['schemas']['Edition']['properties']['eventDate'])->toMatchArray([
             'oneOf' => [
@@ -111,5 +141,25 @@ test('generates a valid OpenAPI 3.1 document with bearer authentication', functi
                 ['type' => 'integer'],
                 ['type' => 'null'],
             ],
+        ])
+        ->and($document['components']['schemas']['DashboardEdition']['properties'])->toHaveKeys([
+            'isAdmin',
+            'isParticipant',
+            'assignmentAvailable',
+        ])
+        ->and($document['components']['schemas']['Order']['properties'])->toHaveKeys([
+            'id',
+            'editionId',
+            'receiverParticipantId',
+        ])
+        ->and($document['components']['schemas']['Order']['required'])->toContain('receiverParticipantId')
+        ->and($document['paths']['/api/v1/orders']['get']['parameters'])->toContainEqual([
+            'name' => 'filter[edition_id]',
+            'in' => 'query',
+            'schema' => ['type' => 'integer', 'minimum' => 1],
+        ])->toContainEqual([
+            'name' => 'page',
+            'in' => 'query',
+            'schema' => ['type' => 'integer', 'minimum' => 1],
         ]);
 });

@@ -4,7 +4,9 @@ return [
     'array' => 'O campo :attribute deve ser uma lista.',
     'distinct' => 'O campo :attribute possui um valor duplicado.',
     'email' => 'O campo :attribute deve ser um endereço de e-mail válido.',
+    'exists' => 'O :attribute selecionado é inválido.',
     'max' => [
+        'numeric' => 'O campo :attribute não pode ser maior que :max.',
         'string' => 'O campo :attribute não pode ter mais de :max caracteres.',
     ],
     'min' => [
@@ -24,6 +26,9 @@ return [
         'email' => 'e-mail',
         'name' => 'nome',
         'password' => 'senha',
+        'productId' => 'produto',
+        'q' => 'busca',
+        'limit' => 'limite',
         'wishIds' => 'ordem dos desejos',
         'wishIds.*' => 'item da ordem dos desejos',
     ],

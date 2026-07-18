@@ -2,6 +2,7 @@
 
 namespace App\Actions\Editions;
 
+use App\Enums\ConversationType;
 use App\Enums\EditionStatus;
 use App\Enums\GroupMemberStatus;
 use App\Models\Edition;
@@ -43,6 +44,10 @@ final class CreateEdition
                 ]);
 
             $edition->participants()->createMany($participants);
+            $edition->conversations()->create([
+                'type' => ConversationType::Edition,
+                'assignment_id' => null,
+            ]);
 
             return $edition;
         });

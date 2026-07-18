@@ -1,11 +1,22 @@
-import { ChevronDown, ChevronUp, Pencil, Trash2 } from "lucide-react-native";
+import {
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Pencil,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react-native";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, View } from "react-native";
 
-import type { Wish } from "@/api/generated/models";
+import type { Product, Wish } from "@/api/generated/models";
 import { FormField } from "@/components/common/form-field";
 import { Button, Card, IconButton, Text } from "@/components/ui";
 import { palette } from "@/theme/tokens";
+
+import { ProductDetails } from "./product-details";
 
 interface WishListItemProps {
   wish: Wish;
@@ -14,10 +25,15 @@ interface WishListItemProps {
   locked: boolean;
   editing: boolean;
   editingDescription: string;
+  editingProduct: Product | null;
+  productSearchPanel?: ReactNode;
   fieldError?: string;
   controlsDisabled: boolean;
   busy?: "up" | "down" | "update" | "delete";
   onEditingDescriptionChange(value: string): void;
+  onChooseProduct(): void;
+  onRemoveEditingProduct(): void;
+  onOpenProduct(product: Product): void;
   onBeginEdit(): void;
   onCancelEdit(): void;
   onSaveEdit(): void;
@@ -33,10 +49,15 @@ export function WishListItem({
   locked,
   editing,
   editingDescription,
+  editingProduct,
+  productSearchPanel,
   fieldError,
   controlsDisabled,
   busy,
   onEditingDescriptionChange,
+  onChooseProduct,
+  onRemoveEditingProduct,
+  onOpenProduct,
   onBeginEdit,
   onCancelEdit,
   onSaveEdit,
@@ -59,6 +80,39 @@ export function WishListItem({
             editable={busy !== "update"}
             error={fieldError}
           />
+          {editingProduct ? (
+            <View className="gap-3 rounded-tile border border-hairline p-3">
+              <ProductDetails product={editingProduct} />
+              <View className="flex-row flex-wrap gap-2">
+                <Button
+                  className="flex-1"
+                  label={t("products.change")}
+                  variant="light"
+                  size="sm"
+                  leftIcon={<Search color={palette.mintDeep} size={16} />}
+                  disabled={Boolean(busy)}
+                  onPress={onChooseProduct}
+                />
+                <IconButton
+                  accessibilityLabel={t("products.remove")}
+                  disabled={Boolean(busy)}
+                  onPress={onRemoveEditingProduct}
+                >
+                  <X color={palette.pink} size={18} />
+                </IconButton>
+              </View>
+            </View>
+          ) : (
+            <Button
+              label={t("products.addOptional")}
+              variant="light"
+              size="sm"
+              leftIcon={<Search color={palette.mintDeep} size={16} />}
+              disabled={Boolean(busy)}
+              onPress={onChooseProduct}
+            />
+          )}
+          {productSearchPanel}
           <View className="flex-row gap-2">
             <Button
               className="flex-1"
@@ -83,6 +137,20 @@ export function WishListItem({
       ) : (
         <>
           <Text>{wish.description}</Text>
+          {wish.product ? (
+            <View className="gap-3 rounded-tile bg-cloud/70 p-3">
+              <ProductDetails product={wish.product} />
+              <Button
+                label={t("products.open")}
+                variant="light"
+                size="sm"
+                leftIcon={<ExternalLink color={palette.mintDeep} size={16} />}
+                onPress={() => {
+                  if (wish.product) onOpenProduct(wish.product);
+                }}
+              />
+            </View>
+          ) : null}
           {!locked ? (
             <View className="flex-row justify-end gap-2">
               <IconButton

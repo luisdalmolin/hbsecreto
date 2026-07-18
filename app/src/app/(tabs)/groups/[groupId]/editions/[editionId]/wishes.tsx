@@ -1,12 +1,13 @@
 import { useLocalSearchParams } from "expo-router";
-import { Archive, Plus } from "lucide-react-native";
-import { useState } from "react";
+import { Archive, ExternalLink, Plus, Search, X } from "lucide-react-native";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Alert, View } from "react-native";
 
 import { normalizeApiError } from "@/api/errors";
 import { getEdition } from "@/api/generated/editions/editions";
-import type { Wish } from "@/api/generated/models";
+import type { Product, Wish } from "@/api/generated/models";
+import { searchProducts } from "@/api/generated/products/products";
 import {
   createWish,
   deleteWish,
@@ -18,8 +19,11 @@ import { AppScreen } from "@/components/common/app-screen";
 import { FormField } from "@/components/common/form-field";
 import { ScreenState } from "@/components/common/screen-state";
 import { WishListItem } from "@/components/wishes/wish-list-item";
+import { ProductDetails } from "@/components/wishes/product-details";
+import { ProductSearchPanel } from "@/components/wishes/product-search-panel";
 import { Button, Card, Text } from "@/components/ui";
 import { apiErrorMessage, parseRouteId } from "@/features/shared/presentation";
+import { openProduct } from "@/features/products/open-product";
 import { useFocusResource } from "@/hooks/use-focus-resource";
 import { useMountedRef } from "@/hooks/use-mounted-ref";
 import { palette } from "@/theme/tokens";
@@ -30,33 +34,117 @@ type Mutation =
   | { type: "delete"; wishId: number }
   | { type: "reorder"; wishId: number; offset: -1 | 1 };
 
+type ProductPickerTarget = "create" | number;
+
 export default function WishesScreen() {
   const { t } = useTranslation();
   const params = useLocalSearchParams<{ groupId: string; editionId: string }>();
   const groupId = parseRouteId(params.groupId);
   const editionId = parseRouteId(params.editionId);
   const [description, setDescription] = useState("");
+  const [product, setProduct] = useState<Product | null>(null);
   const [editingId, setEditingId] = useState<number>();
   const [editingDescription, setEditingDescription] = useState("");
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [productPickerTarget, setProductPickerTarget] =
+    useState<ProductPickerTarget>();
+  const [productQuery, setProductQuery] = useState("");
+  const [productResults, setProductResults] = useState<Product[]>([]);
+  const [productSearching, setProductSearching] = useState(false);
+  const [productSearched, setProductSearched] = useState(false);
+  const [productSearchError, setProductSearchError] = useState<unknown>();
+  const [productFieldError, setProductFieldError] = useState<string>();
+  const [productLinkError, setProductLinkError] = useState<string>();
   const [mutation, setMutation] = useState<Mutation>();
   const [mutationError, setMutationError] = useState<unknown>();
   const [localFieldError, setLocalFieldError] = useState<string>();
   const mounted = useMountedRef();
-  const load = async (signal: AbortSignal) => {
-    if (!groupId || !editionId) throw new Error(t("common.errors.notFound"));
-    const [edition, wishes] = await Promise.all([
-      getEdition(groupId, editionId, { signal }),
-      getMyWishes(groupId, editionId, { signal }),
-    ]);
-    return { edition, wishes: wishes.data };
-  };
+  const load = useCallback(
+    async (signal: AbortSignal) => {
+      if (!groupId || !editionId) throw new Error(t("common.errors.notFound"));
+      const [edition, wishes] = await Promise.all([
+        getEdition(groupId, editionId, { signal }),
+        getMyWishes(groupId, editionId, { signal }),
+      ]);
+      return { edition, wishes: wishes.data };
+    },
+    [editionId, groupId, t],
+  );
   const resource = useFocusResource(load);
   const fieldError =
     localFieldError ?? normalizeApiError(mutationError).fields?.description;
+  const normalizedProductError = normalizeApiError(productSearchError);
+  const productSearchMessage =
+    productFieldError ??
+    normalizedProductError.fields?.q ??
+    (productSearchError ? apiErrorMessage(productSearchError, t) : undefined);
 
   function clearErrors(): void {
     setLocalFieldError(undefined);
     setMutationError(undefined);
+    setProductLinkError(undefined);
+  }
+
+  function resetProductSearch(): void {
+    setProductPickerTarget(undefined);
+    setProductQuery("");
+    setProductResults([]);
+    setProductSearching(false);
+    setProductSearched(false);
+    setProductSearchError(undefined);
+    setProductFieldError(undefined);
+  }
+
+  function beginProductSearch(target: ProductPickerTarget): void {
+    clearErrors();
+    setProductPickerTarget(target);
+    setProductQuery("");
+    setProductResults([]);
+    setProductSearched(false);
+    setProductSearchError(undefined);
+    setProductFieldError(undefined);
+  }
+
+  async function searchForProduct(): Promise<void> {
+    if (!groupId || !editionId || productSearching) return;
+    const query = productQuery.trim();
+
+    if (query.length < 2) {
+      setProductFieldError(t("products.queryRequired"));
+      return;
+    }
+
+    setProductSearching(true);
+    setProductSearched(false);
+    setProductSearchError(undefined);
+    setProductFieldError(undefined);
+    try {
+      const result = await searchProducts(groupId, editionId, {
+        q: query,
+        limit: 10,
+      });
+      if (!mounted.current) return;
+      setProductResults(result.data);
+      setProductSearched(true);
+    } catch (exception) {
+      if (!mounted.current) return;
+      setProductSearchError(exception);
+    }
+    if (mounted.current) setProductSearching(false);
+  }
+
+  function selectProduct(selected: Product): void {
+    if (productPickerTarget === "create") setProduct(selected);
+    else if (typeof productPickerTarget === "number")
+      setEditingProduct(selected);
+    resetProductSearch();
+  }
+
+  async function openProductLink(selected: Product): Promise<void> {
+    setProductLinkError(undefined);
+    const opened = await openProduct(selected);
+    if (mounted.current && !opened)
+      setProductLinkError(t("products.openError"));
   }
 
   function validate(value: string): string | undefined {
@@ -77,12 +165,15 @@ export default function WishesScreen() {
     try {
       const wish = await createWish(groupId, editionId, {
         description: value,
+        productId: product?.id ?? null,
       });
       if (!mounted.current) return;
       resource.setData((current) =>
         current ? { ...current, wishes: [...current.wishes, wish] } : current,
       );
       setDescription("");
+      setProduct(null);
+      resetProductSearch();
     } catch (exception) {
       if (!mounted.current) return;
       setMutationError(exception);
@@ -95,12 +186,16 @@ export default function WishesScreen() {
     clearErrors();
     setEditingId(wish.id);
     setEditingDescription(wish.description);
+    setEditingProduct(wish.product);
+    resetProductSearch();
   }
 
   function cancelEdit(): void {
     clearErrors();
     setEditingId(undefined);
     setEditingDescription("");
+    setEditingProduct(null);
+    resetProductSearch();
   }
 
   async function saveEdit(wishId: number): Promise<void> {
@@ -117,6 +212,7 @@ export default function WishesScreen() {
     try {
       const updated = await updateWish(groupId, editionId, wishId, {
         description: value,
+        productId: editingProduct?.id ?? null,
       });
       if (!mounted.current) return;
       resource.setData((current) =>
@@ -131,6 +227,8 @@ export default function WishesScreen() {
       );
       setEditingId(undefined);
       setEditingDescription("");
+      setEditingProduct(null);
+      resetProductSearch();
     } catch (exception) {
       if (!mounted.current) return;
       setMutationError(exception);
@@ -254,6 +352,68 @@ export default function WishesScreen() {
             editable={!mutation}
             error={editingId === undefined ? fieldError : undefined}
           />
+          <Text variant="bodyBold">{t("products.optional")}</Text>
+          {product ? (
+            <View className="gap-3 rounded-tile border border-hairline p-3">
+              <ProductDetails product={product} />
+              <View className="flex-row flex-wrap gap-2">
+                <Button
+                  className="flex-1"
+                  label={t("products.change")}
+                  variant="light"
+                  size="sm"
+                  leftIcon={<Search color={palette.mintDeep} size={16} />}
+                  disabled={Boolean(mutation)}
+                  onPress={() => beginProductSearch("create")}
+                />
+                <Button
+                  label={t("products.open")}
+                  variant="light"
+                  size="sm"
+                  leftIcon={<ExternalLink color={palette.mintDeep} size={16} />}
+                  disabled={Boolean(mutation)}
+                  onPress={() => void openProductLink(product)}
+                />
+                <Button
+                  label={t("products.remove")}
+                  variant="light"
+                  size="sm"
+                  leftIcon={<X color={palette.pink} size={16} />}
+                  disabled={Boolean(mutation)}
+                  onPress={() => {
+                    setProduct(null);
+                    resetProductSearch();
+                  }}
+                />
+              </View>
+            </View>
+          ) : (
+            <Button
+              label={t("products.addOptional")}
+              variant="light"
+              size="sm"
+              leftIcon={<Search color={palette.mintDeep} size={16} />}
+              disabled={Boolean(mutation)}
+              onPress={() => beginProductSearch("create")}
+            />
+          )}
+          {productPickerTarget === "create" ? (
+            <ProductSearchPanel
+              query={productQuery}
+              results={productResults}
+              searching={productSearching}
+              searched={productSearched}
+              error={productSearchMessage}
+              onQueryChange={(value) => {
+                setProductQuery(value);
+                setProductFieldError(undefined);
+                setProductSearchError(undefined);
+              }}
+              onSearch={() => void searchForProduct()}
+              onSelect={selectProduct}
+              onCancel={resetProductSearch}
+            />
+          ) : null}
           <Button
             label={
               mutation?.type === "create" ? t("wishes.adding") : t("wishes.add")
@@ -290,6 +450,26 @@ export default function WishesScreen() {
               locked={locked}
               editing={editingId === wish.id}
               editingDescription={editingDescription}
+              editingProduct={editingProduct}
+              productSearchPanel={
+                productPickerTarget === wish.id ? (
+                  <ProductSearchPanel
+                    query={productQuery}
+                    results={productResults}
+                    searching={productSearching}
+                    searched={productSearched}
+                    error={productSearchMessage}
+                    onQueryChange={(value) => {
+                      setProductQuery(value);
+                      setProductFieldError(undefined);
+                      setProductSearchError(undefined);
+                    }}
+                    onSearch={() => void searchForProduct()}
+                    onSelect={selectProduct}
+                    onCancel={resetProductSearch}
+                  />
+                ) : undefined
+              }
               fieldError={fieldError}
               controlsDisabled={controlsDisabled}
               busy={busyState(mutation, wish.id)}
@@ -297,6 +477,12 @@ export default function WishesScreen() {
                 setEditingDescription(value);
                 clearErrors();
               }}
+              onChooseProduct={() => beginProductSearch(wish.id)}
+              onRemoveEditingProduct={() => {
+                setEditingProduct(null);
+                resetProductSearch();
+              }}
+              onOpenProduct={(selected) => void openProductLink(selected)}
               onBeginEdit={() => beginEdit(wish)}
               onCancelEdit={cancelEdit}
               onSaveEdit={() => void saveEdit(wish.id)}
@@ -311,6 +497,11 @@ export default function WishesScreen() {
       {mutationError ? (
         <Text className="text-pink-deep" accessibilityRole="alert">
           {apiErrorMessage(mutationError, t)}
+        </Text>
+      ) : null}
+      {productLinkError ? (
+        <Text className="text-pink-deep" accessibilityRole="alert">
+          {productLinkError}
         </Text>
       ) : null}
       {resource.error ? (

@@ -399,7 +399,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Assignment conversations visible to the authenticated participant.",
+                        "description": "Edition and assignment conversations visible to the authenticated participant.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -480,7 +480,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "The latest messages in an assignment conversation.",
+                        "description": "The latest messages in a visible conversation.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -730,6 +730,41 @@
                 ]
             }
         },
+        "/api/v1/dashboard": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "operationId": "getDashboard",
+                "responses": {
+                    "200": {
+                        "description": "The authenticated user home dashboard.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Dashboard"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication is required.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/groups/{group}/editions/{edition}/draw-constraints": {
             "get": {
                 "tags": [
@@ -888,6 +923,89 @@
                     },
                     "422": {
                         "description": "The request payload is invalid.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/groups/{group}/editions/{edition}/draw-constraints/copy-from-previous": {
+            "post": {
+                "tags": [
+                    "Draw constraints"
+                ],
+                "operationId": "copyDrawConstraintsFromPreviousEdition",
+                "parameters": [
+                    {
+                        "name": "group",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "edition",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Recurring exclusions copied from the previous edition.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CopiedDrawConstraints"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication is required.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An active administrator is required.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "The group or edition is not visible.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "The edition can no longer be changed.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2010,7 +2128,7 @@
                         }
                     },
                     "409": {
-                        "description": "The roster is frozen or an open edition would have fewer than two participants.",
+                        "description": "The roster is frozen, the open-edition minimum would be violated, or the participant has protected purchase or message history.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -3117,6 +3235,476 @@
                 ]
             }
         },
+        "/api/v1/orders": {
+            "get": {
+                "tags": [
+                    "Orders"
+                ],
+                "operationId": "listOrders",
+                "parameters": [
+                    {
+                        "name": "filter[edition_id]",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Orders owned by the authenticated user.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderCollection"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication is required.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/groups/{group}/editions/{edition}/pick-orders": {
+            "post": {
+                "tags": [
+                    "Orders"
+                ],
+                "operationId": "createPickOrder",
+                "parameters": [
+                    {
+                        "name": "group",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "edition",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreatePickOrderRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Pick purchase checkout created.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Order"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication is required.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An active edition participant is required.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "The group, edition, or receiver is not visible.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "The purchase conflicts with the edition state or draw rules.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "The request payload is invalid.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/orders/{order}": {
+            "get": {
+                "tags": [
+                    "Orders"
+                ],
+                "operationId": "getOrder",
+                "parameters": [
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Owned order details.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Order"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication is required.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Only the buyer may view this order.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/orders/{order}/refund": {
+            "post": {
+                "tags": [
+                    "Orders"
+                ],
+                "operationId": "refundOrder",
+                "parameters": [
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Order refund completed.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Order"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication is required.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Only the buyer may refund this order.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Only paid pre-draw orders may be refunded.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/payments/mercadopago/webhook": {
+            "post": {
+                "tags": [
+                    "Payment webhooks"
+                ],
+                "operationId": "processMercadoPagoWebhook",
+                "parameters": [
+                    {
+                        "name": "data_id",
+                        "in": "query",
+                        "description": "PHP-normalized form of Mercado Pago's data.id query parameter.",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "x-signature",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "x-request-id",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MercadoPagoWebhook"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Webhook accepted."
+                    },
+                    "401": {
+                        "description": "The webhook signature is invalid.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "The authoritative payment does not match its order.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "The webhook payload is invalid.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/groups/{group}/editions/{edition}/products/search": {
+            "get": {
+                "tags": [
+                    "Products"
+                ],
+                "operationId": "searchProducts",
+                "parameters": [
+                    {
+                        "name": "group",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "edition",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 100,
+                            "minLength": 2
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 20,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cached affiliate product search results.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProductCollection"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication is required.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An active edition participant is required.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "The group or edition is not visible.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "The search query is invalid.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "The affiliate product catalog is unavailable.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/push-devices": {
             "post": {
                 "tags": [
@@ -3850,6 +4438,7 @@
             "Conversation": {
                 "required": [
                     "id",
+                    "type",
                     "role",
                     "counterpart",
                     "unreadCount",
@@ -3857,6 +4446,16 @@
                     "canSend"
                 ],
                 "properties": {
+                    "counterpart": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ConversationCounterpart"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
                     "lastMessageAt": {
                         "oneOf": [
                             {
@@ -3872,15 +4471,20 @@
                         "type": "integer",
                         "example": 1
                     },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "edition",
+                            "assignment"
+                        ]
+                    },
                     "role": {
                         "type": "string",
                         "enum": [
+                            "member",
                             "giver",
                             "receiver"
                         ]
-                    },
-                    "counterpart": {
-                        "$ref": "#/components/schemas/ConversationCounterpart"
                     },
                     "unreadCount": {
                         "type": "integer",
@@ -3941,11 +4545,36 @@
                 },
                 "type": "object"
             },
+            "MessageAuthor": {
+                "required": [
+                    "displayName",
+                    "anonymous"
+                ],
+                "properties": {
+                    "displayName": {
+                        "example": "João",
+                        "oneOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "anonymous": {
+                        "type": "boolean",
+                        "example": false
+                    }
+                },
+                "type": "object"
+            },
             "Message": {
                 "required": [
                     "id",
                     "body",
                     "isMine",
+                    "author",
                     "sentAt"
                 ],
                 "properties": {
@@ -3962,9 +4591,176 @@
                         "type": "boolean",
                         "example": true
                     },
+                    "author": {
+                        "$ref": "#/components/schemas/MessageAuthor"
+                    },
                     "sentAt": {
                         "type": "string",
                         "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "Dashboard": {
+                "required": [
+                    "featuredEdition",
+                    "groups"
+                ],
+                "properties": {
+                    "featuredEdition": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/DashboardEdition"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DashboardGroup"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "DashboardEdition": {
+                "required": [
+                    "groupId",
+                    "groupName",
+                    "editionId",
+                    "editionName",
+                    "status",
+                    "budgetCents",
+                    "currency",
+                    "eventDate",
+                    "isAdmin",
+                    "isParticipant",
+                    "participantCount",
+                    "wishCount",
+                    "assignmentAvailable"
+                ],
+                "properties": {
+                    "budgetCents": {
+                        "oneOf": [
+                            {
+                                "type": "integer",
+                                "minimum": 0
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "eventDate": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "date"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "groupId": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "groupName": {
+                        "type": "string",
+                        "example": "Família Silva"
+                    },
+                    "editionId": {
+                        "type": "integer",
+                        "example": 4
+                    },
+                    "editionName": {
+                        "type": "string",
+                        "example": "Natal 2026"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "draft",
+                            "open",
+                            "drawn",
+                            "revealed"
+                        ]
+                    },
+                    "currency": {
+                        "type": "string",
+                        "example": "BRL"
+                    },
+                    "isAdmin": {
+                        "type": "boolean"
+                    },
+                    "isParticipant": {
+                        "type": "boolean"
+                    },
+                    "participantCount": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "wishCount": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "assignmentAvailable": {
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "DashboardGroup": {
+                "required": [
+                    "id",
+                    "name",
+                    "memberCount",
+                    "currentEditionId",
+                    "currentEditionStatus"
+                ],
+                "properties": {
+                    "currentEditionId": {
+                        "oneOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "currentEditionStatus": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "enum": [
+                                    "draft",
+                                    "open",
+                                    "drawn",
+                                    "revealed"
+                                ]
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Família Silva"
+                    },
+                    "memberCount": {
+                        "type": "integer",
+                        "example": 8,
+                        "minimum": 1
                     }
                 },
                 "type": "object"
@@ -4016,6 +4812,51 @@
                     "displayName": {
                         "type": "string",
                         "example": "João"
+                    }
+                },
+                "type": "object"
+            },
+            "CopiedDrawConstraints": {
+                "required": [
+                    "sourceEditionId",
+                    "copiedCount",
+                    "skippedMissingParticipants",
+                    "skippedDuplicates",
+                    "skippedConflicts",
+                    "data"
+                ],
+                "properties": {
+                    "sourceEditionId": {
+                        "oneOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "copiedCount": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "skippedMissingParticipants": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "skippedDuplicates": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "skippedConflicts": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DrawConstraint"
+                        }
                     }
                 },
                 "type": "object"
@@ -4095,7 +4936,8 @@
                     "source": {
                         "type": "string",
                         "enum": [
-                            "admin"
+                            "admin",
+                            "purchase"
                         ]
                     }
                 },
@@ -4828,6 +5670,248 @@
                 },
                 "type": "object"
             },
+            "CreatePickOrderRequest": {
+                "required": [
+                    "receiverParticipantId"
+                ],
+                "properties": {
+                    "receiverParticipantId": {
+                        "type": "integer",
+                        "example": 2,
+                        "minimum": 1
+                    }
+                },
+                "type": "object"
+            },
+            "MercadoPagoWebhook": {
+                "required": [
+                    "id",
+                    "type",
+                    "action",
+                    "data"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "type": {
+                        "type": "string",
+                        "example": "payment"
+                    },
+                    "action": {
+                        "type": "string",
+                        "example": "payment.updated"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/MercadoPagoWebhookResource"
+                    }
+                },
+                "type": "object"
+            },
+            "MercadoPagoWebhookResource": {
+                "required": [
+                    "id"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "OrderCollection": {
+                "required": [
+                    "data",
+                    "meta"
+                ],
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Order"
+                        }
+                    },
+                    "meta": {
+                        "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                },
+                "type": "object"
+            },
+            "Order": {
+                "required": [
+                    "id",
+                    "editionId",
+                    "receiverParticipantId",
+                    "type",
+                    "amountCents",
+                    "currency",
+                    "status",
+                    "paymentProvider",
+                    "checkoutUrl",
+                    "paidAt",
+                    "createdAt"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "editionId": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "receiverParticipantId": {
+                        "oneOf": [
+                            {
+                                "type": "integer",
+                                "minimum": 1
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "checkoutUrl": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "paidAt": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "pick_purchase"
+                        ]
+                    },
+                    "amountCents": {
+                        "type": "integer",
+                        "example": 499,
+                        "minimum": 1
+                    },
+                    "currency": {
+                        "type": "string",
+                        "example": "BRL"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "failed",
+                            "refunded"
+                        ]
+                    },
+                    "paymentProvider": {
+                        "type": "string",
+                        "example": "mercadopago"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "ProductCollection": {
+                "required": [
+                    "data"
+                ],
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Product"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "Product": {
+                "required": [
+                    "id",
+                    "provider",
+                    "externalId",
+                    "title",
+                    "url",
+                    "affiliateUrl",
+                    "priceCents",
+                    "currency",
+                    "imageUrl",
+                    "fetchedAt"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "provider": {
+                        "type": "string",
+                        "example": "mercadolivre"
+                    },
+                    "externalId": {
+                        "type": "string",
+                        "example": "MLB1234567890"
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "Livro de ficção científica"
+                    },
+                    "url": {
+                        "type": "string",
+                        "format": "uri",
+                        "example": "https://produto.mercadolivre.com.br/MLB-123"
+                    },
+                    "affiliateUrl": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uri"
+                    },
+                    "priceCents": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "example": 7990,
+                        "minimum": 0
+                    },
+                    "currency": {
+                        "type": "string",
+                        "example": "BRL",
+                        "maxLength": 3,
+                        "minLength": 3
+                    },
+                    "imageUrl": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uri"
+                    },
+                    "fetchedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
             "Error": {
                 "required": [
                     "message"
@@ -4880,6 +5964,13 @@
                         "example": "Um livro de ficção científica",
                         "maxLength": 500,
                         "minLength": 1
+                    },
+                    "productId": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "example": 1
                     }
                 },
                 "type": "object"
@@ -4910,6 +6001,13 @@
                         "example": "Uma edição especial do livro",
                         "maxLength": 500,
                         "minLength": 1
+                    },
+                    "productId": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "example": 1
                     }
                 },
                 "type": "object"
@@ -4932,9 +6030,20 @@
                 "required": [
                     "id",
                     "description",
-                    "sortOrder"
+                    "sortOrder",
+                    "product"
                 ],
                 "properties": {
+                    "product": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/Product"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
                     "id": {
                         "type": "integer",
                         "example": 1
@@ -4972,6 +6081,9 @@
             "name": "Conversations"
         },
         {
+            "name": "Dashboard"
+        },
+        {
             "name": "Draw constraints"
         },
         {
@@ -5000,6 +6112,15 @@
         },
         {
             "name": "Notification preferences"
+        },
+        {
+            "name": "Orders"
+        },
+        {
+            "name": "Payment webhooks"
+        },
+        {
+            "name": "Products"
         },
         {
             "name": "Push devices"

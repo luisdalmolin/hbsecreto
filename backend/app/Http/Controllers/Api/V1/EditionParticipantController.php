@@ -121,7 +121,7 @@ final class EditionParticipantController extends Controller
             new OA\Response(response: 401, description: 'Authentication is required.', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
             new OA\Response(response: 403, description: 'An active administrator is required.', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
             new OA\Response(response: 404, description: 'The group, edition, or participant is not visible.', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
-            new OA\Response(response: 409, description: 'The roster is frozen or an open edition would have fewer than two participants.', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
+            new OA\Response(response: 409, description: 'The roster is frozen, the open-edition minimum would be violated, or the participant has protected purchase or message history.', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
         ],
     )]
     public function destroy(Group $group, Edition $edition, EditionParticipant $participant, RemoveEditionParticipant $removeParticipant): Response

@@ -4,7 +4,9 @@ namespace App\Actions\DrawConstraints;
 
 use App\Draws\DrawConflictException;
 use App\Draws\DrawFailureCode;
+use App\Enums\DrawConstraintSource;
 use App\Enums\EditionStatus;
+use App\Exceptions\DomainConflictException;
 use App\Models\DrawConstraint;
 use App\Models\Edition;
 use App\Models\Group;
@@ -24,6 +26,11 @@ final class DeleteDrawConstraint
             }
 
             $lockedConstraint = $lockedEdition->drawConstraints()->whereKey($constraint->id)->lockForUpdate()->firstOrFail();
+
+            if ($lockedConstraint->source === DrawConstraintSource::Purchase) {
+                throw new DomainConflictException('orders.purchase_constraint_managed');
+            }
+
             $lockedConstraint->delete();
         });
     }

@@ -16,6 +16,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Edition;
 use App\Models\EditionParticipant;
 use App\Models\Group;
+use App\Models\Product;
 use App\Models\User;
 use App\Models\Wish;
 use Illuminate\Http\Request;
@@ -23,6 +24,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Attributes\Controllers\Authorize;
 use OpenApi\Attributes as OA;
 use Spatie\LaravelData\DataCollection;
+use Spatie\LaravelData\Optional;
 use Spatie\QueryBuilder\QueryBuilder;
 
 #[OA\Tag(name: 'Wishes')]
@@ -42,7 +44,7 @@ final class WishController extends Controller
     public function index(Group $group, Edition $edition, Request $request): WishCollectionData
     {
         $participant = $this->participantFor($edition, $request);
-        $baseQuery = Wish::query()->whereBelongsTo($participant, 'editionParticipant');
+        $baseQuery = Wish::query()->whereBelongsTo($participant, 'editionParticipant')->with('product');
         $wishes = QueryBuilder::for($baseQuery)
             ->allowedFilters()
             ->allowedIncludes()
@@ -75,7 +77,9 @@ final class WishController extends Controller
     {
         $participant = $this->participantFor($edition, $request);
 
-        return WishData::from($createWish->handle($edition, $participant, $data->description));
+        $product = $data->productId === null ? null : Product::query()->findOrFail($data->productId);
+
+        return WishData::from($createWish->handle($edition, $participant, $data->description, $product));
     }
 
     #[Authorize('update', 'wish')]
@@ -94,7 +98,10 @@ final class WishController extends Controller
     )]
     public function update(UpdateWishData $data, Group $group, Edition $edition, Wish $wish, UpdateWish $updateWish): WishData
     {
-        return WishData::from($updateWish->handle($edition, $wish, $data->description));
+        $replaceProduct = ! $data->productId instanceof Optional;
+        $product = is_int($data->productId) ? Product::query()->findOrFail($data->productId) : null;
+
+        return WishData::from($updateWish->handle($edition, $wish, $data->description, $replaceProduct, $product));
     }
 
     #[Authorize('delete', 'wish')]

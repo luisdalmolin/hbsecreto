@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\EditionStatus;
 use App\Enums\GroupMemberStatus;
 use App\Policies\GroupPolicy;
 use Database\Factories\GroupFactory;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -23,6 +25,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
+ * @property-read int|null $active_member_count
+ * @property-read Edition|null $currentEdition
  */
 #[Fillable(['name', 'description', 'created_by'])]
 #[UsePolicy(GroupPolicy::class)]
@@ -47,6 +51,15 @@ class Group extends Model
     public function editions(): HasMany
     {
         return $this->hasMany(Edition::class);
+    }
+
+    /** @return HasOne<Edition, $this> */
+    public function currentEdition(): HasOne
+    {
+        return $this->editions()->one()->ofMany(
+            ['id' => 'max'],
+            fn (Builder $editions): Builder => $editions->where('status', '!=', EditionStatus::Archived),
+        );
     }
 
     /** @param Builder<Group> $query */

@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import {
   Ban,
+  CreditCard,
   Eye,
   Gift,
   Heart,
@@ -222,6 +223,52 @@ export default function EditionDetailScreen() {
         </Card>
       ) : null}
 
+      {isParticipant &&
+      (edition.status === "draft" || edition.status === "open") ? (
+        <Card className="gap-3 p-5">
+          <View className="flex-row items-center gap-3">
+            <CreditCard color={palette.mintDeep} size={22} />
+            <View className="flex-1">
+              <Text variant="cardTitle">{t("orders.cardTitle")}</Text>
+              <Text variant="caption">{t("orders.cardHint")}</Text>
+            </View>
+          </View>
+          <Button
+            label={t("orders.open")}
+            variant="light"
+            onPress={() =>
+              router.push({
+                pathname: "/groups/[groupId]/editions/[editionId]/pick",
+                params: routeParams,
+              })
+            }
+          />
+        </Card>
+      ) : null}
+
+      {isParticipant ? (
+        <Card className="gap-3 p-5">
+          <View className="flex-row items-center gap-3">
+            <MessageCircle color={palette.mintDeep} size={22} />
+            <View className="flex-1">
+              <Text variant="cardTitle">{t("chat.groupConversation")}</Text>
+              <Text variant="caption">{t("chat.groupConversationHint")}</Text>
+            </View>
+          </View>
+          <Button
+            label={t("chat.open")}
+            variant="light"
+            onPress={() =>
+              router.push({
+                pathname:
+                  "/groups/[groupId]/editions/[editionId]/conversations",
+                params: routeParams,
+              })
+            }
+          />
+        </Card>
+      ) : null}
+
       {(edition.status === "draft" || edition.status === "open") && isAdmin ? (
         <Card className="gap-3 p-5">
           <Text variant="section">{t("editions.drawArea")}</Text>
@@ -280,20 +327,6 @@ export default function EditionDetailScreen() {
               })
             }
           />
-          {isParticipant ? (
-            <Button
-              label={t("chat.open")}
-              variant="light"
-              leftIcon={<MessageCircle color={palette.mintDeep} size={18} />}
-              onPress={() =>
-                router.push({
-                  pathname:
-                    "/groups/[groupId]/editions/[editionId]/conversations",
-                  params: routeParams,
-                })
-              }
-            />
-          ) : null}
           {edition.status === "revealed" || edition.status === "archived" ? (
             <Button
               label={t("editions.allAssignments")}

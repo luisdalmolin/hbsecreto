@@ -120,6 +120,69 @@ test('forced pairs coexist with unrelated exclusions regardless of normalized pa
         ->assertJsonPath('ready', true);
 });
 
+test('administrators can idempotently copy recurring exclusions from the previous edition', function (): void {
+    DrawConstraint::factory()->for($this->edition)->create([
+        'type' => 'must_not_pair',
+        'giver_edition_participant_id' => $this->participants[0]->id,
+        'receiver_edition_participant_id' => $this->participants[1]->id,
+        'created_by' => $this->admin->id,
+    ]);
+    DrawConstraint::factory()->for($this->edition)->create([
+        'type' => 'must_not_pair',
+        'giver_edition_participant_id' => $this->participants[0]->id,
+        'receiver_edition_participant_id' => $this->participants[2]->id,
+        'created_by' => $this->admin->id,
+    ]);
+    DrawConstraint::factory()->for($this->edition)->create([
+        'type' => 'must_not_pair',
+        'giver_edition_participant_id' => $this->participants[1]->id,
+        'receiver_edition_participant_id' => $this->participants[3]->id,
+        'created_by' => $this->admin->id,
+    ]);
+    $targetEdition = Edition::factory()->for($this->group)->create(['created_by' => $this->admin->id]);
+    $targetParticipants = collect([$this->adminMember, $this->members[0], $this->members[1]])
+        ->map(fn (GroupMember $member): EditionParticipant => EditionParticipant::factory()->for($targetEdition)->create([
+            'group_id' => $this->group->id,
+            'group_member_id' => $member->id,
+        ]));
+    DrawConstraint::factory()->for($targetEdition)->create([
+        'type' => 'must_not_pair',
+        'giver_edition_participant_id' => $targetParticipants[0]->id,
+        'receiver_edition_participant_id' => $targetParticipants[1]->id,
+        'created_by' => $this->admin->id,
+    ]);
+    $url = "/api/v1/groups/{$this->group->id}/editions/{$targetEdition->id}/draw-constraints/copy-from-previous";
+
+    $this->postJson($url)
+        ->assertCreated()
+        ->assertJsonPath('sourceEditionId', $this->edition->id)
+        ->assertJsonPath('copiedCount', 1)
+        ->assertJsonPath('skippedMissingParticipants', 1)
+        ->assertJsonPath('skippedDuplicates', 1)
+        ->assertJsonPath('skippedConflicts', 0)
+        ->assertJsonCount(1, 'data');
+
+    $this->postJson($url)
+        ->assertCreated()
+        ->assertJsonPath('copiedCount', 0)
+        ->assertJsonPath('skippedMissingParticipants', 1)
+        ->assertJsonPath('skippedDuplicates', 2);
+
+    expect($targetEdition->drawConstraints()->count())->toBe(2);
+});
+
+test('copying recurring exclusions respects authorization and edition lifecycle', function (): void {
+    $url = "/api/v1/groups/{$this->group->id}/editions/{$this->edition->id}/draw-constraints/copy-from-previous";
+    Sanctum::actingAs($this->memberUsers[0]);
+    $this->postJson($url)->assertForbidden();
+
+    Sanctum::actingAs($this->admin);
+    $this->edition->update(['status' => EditionStatus::Drawn]);
+    $this->postJson($url)
+        ->assertConflict()
+        ->assertJsonPath('message', 'A edição não está em um estado válido para esta operação.');
+});
+
 test('preflight reports a Hall deficient rule set before drawing', function (): void {
     foreach ([[0, 1], [0, 2], [1, 2]] as [$giverIndex, $receiverIndex]) {
         $this->postJson("/api/v1/groups/{$this->group->id}/editions/{$this->edition->id}/draw-constraints", [

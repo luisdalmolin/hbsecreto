@@ -1,4 +1,5 @@
 import { View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import type { Message } from "@/api/generated/models";
 import { Text } from "@/components/ui";
@@ -10,8 +11,18 @@ interface MessageBubbleProps {
 }
 
 export function MessageBubble({ message, time }: MessageBubbleProps) {
+  const { t } = useTranslation();
+  const authorName = message.author.anonymous
+    ? t("chat.secretSanta")
+    : message.author.displayName;
+
   return (
     <View className={cn("max-w-[84%] gap-1", message.isMine && "self-end")}>
+      {!message.isMine && authorName ? (
+        <Text variant="caption" className="px-2 text-[11px]">
+          {authorName}
+        </Text>
+      ) : null}
       <View
         className={cn(
           "rounded-card px-4 py-3",

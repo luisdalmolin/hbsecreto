@@ -21,6 +21,7 @@ class WishFactory extends Factory
         return [
             'edition_participant_id' => EditionParticipant::factory(),
             'description' => fake()->sentence(),
+            'product_id' => null,
             'sort_order' => fake()->numberBetween(0, 10),
         ];
     }

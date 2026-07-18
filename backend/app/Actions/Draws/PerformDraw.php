@@ -4,11 +4,13 @@ namespace App\Actions\Draws;
 
 use App\Actions\Conversations\CreateAssignmentConversations;
 use App\Actions\Notifications\NotifyEditionParticipants;
+use App\Actions\Orders\ReconcileExpiredPendingOrders;
 use App\Draws\DrawConflictException;
 use App\Draws\DrawFailure;
 use App\Draws\DrawFailureCode;
 use App\Draws\EditionTypeRegistry;
 use App\Enums\EditionStatus;
+use App\Enums\OrderStatus;
 use App\Models\Assignment;
 use App\Models\DrawConstraint;
 use App\Models\Edition;
@@ -25,6 +27,7 @@ final readonly class PerformDraw
         private EditionTypeRegistry $registry,
         private CreateAssignmentConversations $createConversations,
         private NotifyEditionParticipants $notifyParticipants,
+        private ReconcileExpiredPendingOrders $reconcileExpired,
     ) {}
 
     public function handle(Edition $edition, ?int $seed = null): Edition
@@ -36,8 +39,11 @@ final readonly class PerformDraw
             $lockedEdition = Edition::query()->whereKey($edition->id)->lockForUpdate()->firstOrFail();
             /** @var Collection<int, EditionParticipant> $participants */
             $participants = $lockedEdition->participants()->orderBy('id')->lockForUpdate()->get();
+            $this->reconcileExpired->handle($lockedEdition);
+            $orders = $lockedEdition->orders()->orderBy('id')->lockForUpdate()->get();
+            $lockedEdition->drawConstraints()->orderBy('id')->lockForUpdate()->get();
             /** @var Collection<int, DrawConstraint> $constraints */
-            $constraints = $lockedEdition->drawConstraints()->orderBy('id')->lockForUpdate()->get();
+            $constraints = $lockedEdition->drawConstraints()->activeForDraw()->orderBy('id')->get();
             /** @var Collection<int, Assignment> $existing */
             $existing = $lockedEdition->assignments()->orderBy('id')->lockForUpdate()->get();
 
@@ -54,6 +60,10 @@ final readonly class PerformDraw
 
             if ($lockedEdition->status !== EditionStatus::Open) {
                 throw new DrawConflictException(DrawFailureCode::InvalidEditionState);
+            }
+
+            if ($orders->contains('status', OrderStatus::Pending)) {
+                throw new DrawConflictException(DrawFailureCode::PendingPayment);
             }
 
             try {

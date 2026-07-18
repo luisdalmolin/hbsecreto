@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\ConversationType;
 use App\Enums\GroupMemberStatus;
 use App\Models\Conversation;
 use App\Models\Edition;
@@ -20,6 +21,14 @@ final class ConversationPolicy
 
     public function view(User $user, Conversation $conversation): bool
     {
+        if ($conversation->type === ConversationType::Edition) {
+            return $conversation->edition()
+                ->whereHas('participants.groupMember', fn ($members) => $members
+                    ->whereBelongsTo($user)
+                    ->where('status', GroupMemberStatus::Active))
+                ->exists();
+        }
+
         return $conversation->assignment()
             ->where(function ($assignments) use ($user): void {
                 $assignments

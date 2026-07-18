@@ -74,6 +74,12 @@ class Edition extends Model
         return $this->hasMany(Assignment::class);
     }
 
+    /** @return HasMany<Order, $this> */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
     /** @return HasMany<Conversation, $this> */
     public function conversations(): HasMany
     {

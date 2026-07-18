@@ -12,4 +12,5 @@ enum DrawFailureCode: string
     case CorruptAssignments = 'corrupt_assignments';
     case AssignmentNotAvailable = 'assignment_not_available';
     case AssignmentsNotRevealed = 'assignments_not_revealed';
+    case PendingPayment = 'pending_payment';
 }

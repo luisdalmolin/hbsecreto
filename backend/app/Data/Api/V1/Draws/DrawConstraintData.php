@@ -17,7 +17,7 @@ final class DrawConstraintData extends Resource
         #[OA\Property(type: 'string', enum: ['must_not_pair', 'must_pair'])] public DrawConstraintType $type,
         #[OA\Property(example: 1)] public int $giverParticipantId,
         #[OA\Property(example: 2)] public int $receiverParticipantId,
-        #[OA\Property(type: 'string', enum: ['admin'])] public DrawConstraintSource $source,
+        #[OA\Property(type: 'string', enum: ['admin', 'purchase'])] public DrawConstraintSource $source,
     ) {}
 
     public static function fromModel(DrawConstraint $constraint): self

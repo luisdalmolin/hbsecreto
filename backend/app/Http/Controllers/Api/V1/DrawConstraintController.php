@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\DrawConstraints\CopyDrawConstraintsFromPreviousEdition;
 use App\Actions\DrawConstraints\CreateDrawConstraint;
 use App\Actions\DrawConstraints\DeleteDrawConstraint;
+use App\Data\Api\V1\Draws\CopiedDrawConstraintsData;
 use App\Data\Api\V1\Draws\CreateDrawConstraintData;
 use App\Data\Api\V1\Draws\DrawConstraintCollectionData;
 use App\Data\Api\V1\Draws\DrawConstraintData;
@@ -62,6 +64,26 @@ final class DrawConstraintController extends Controller
         $receiver = $edition->participants()->findOrFail($data->receiverParticipantId);
 
         return DrawConstraintData::from($create->handle($edition, $user, $data->type, $giver, $receiver));
+    }
+
+    #[Authorize('manageDraw', 'edition')]
+    #[OA\Post(
+        path: '/api/v1/groups/{group}/editions/{edition}/draw-constraints/copy-from-previous', operationId: 'copyDrawConstraintsFromPreviousEdition', tags: ['Draw constraints'], security: [['bearerAuth' => []]],
+        parameters: [new OA\PathParameter(name: 'group', required: true, schema: new OA\Schema(type: 'integer')), new OA\PathParameter(name: 'edition', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 201, description: 'Recurring exclusions copied from the previous edition.', content: new OA\JsonContent(ref: '#/components/schemas/CopiedDrawConstraints')),
+            new OA\Response(response: 401, description: 'Authentication is required.', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
+            new OA\Response(response: 403, description: 'An active administrator is required.', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
+            new OA\Response(response: 404, description: 'The group or edition is not visible.', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
+            new OA\Response(response: 409, description: 'The edition can no longer be changed.', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
+        ],
+    )]
+    public function copyFromPrevious(Group $group, Edition $edition, Request $request, CopyDrawConstraintsFromPreviousEdition $copy): CopiedDrawConstraintsData
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        return CopiedDrawConstraintsData::fromResult($copy->handle($edition, $user));
     }
 
     #[Authorize('manageDraw', 'edition')]

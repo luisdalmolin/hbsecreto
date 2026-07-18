@@ -7,6 +7,12 @@ use App\Notifications\ExpoPush\ExpoPushTransport;
 use App\Notifications\ExpoPush\FakeExpoPushTransport;
 use App\Notifications\ExpoPush\HttpExpoPushTransport;
 use App\Policies\DatabaseNotificationPolicy;
+use App\Services\AffiliateProducts\AffiliateProductCatalog;
+use App\Services\AffiliateProducts\FakeAffiliateProductIntegration;
+use App\Services\AffiliateProducts\MercadoLivreAffiliateProductIntegration;
+use App\Services\Payments\FakePaymentGateway;
+use App\Services\Payments\MercadoPagoPaymentGateway;
+use App\Services\Payments\PaymentGateway;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
@@ -42,6 +48,40 @@ class AppServiceProvider extends ServiceProvider
                 connectTimeout: Config::integer('services.expo_push.connect_timeout'),
             );
         });
+
+        $this->app->singleton(AffiliateProductCatalog::class, function (): AffiliateProductCatalog {
+            if (app()->environment('testing')) {
+                return new FakeAffiliateProductIntegration;
+            }
+
+            return new MercadoLivreAffiliateProductIntegration(
+                http: app(Factory::class),
+                baseUrl: Config::string('services.mercado_livre.base_url'),
+                siteId: Config::string('services.mercado_livre.site_id'),
+                accessToken: Config::string('services.mercado_livre.access_token'),
+                timeout: Config::integer('services.mercado_livre.timeout'),
+                connectTimeout: Config::integer('services.mercado_livre.connect_timeout'),
+            );
+        });
+
+        $this->app->singleton(PaymentGateway::class, function (): PaymentGateway {
+            if (app()->environment('testing')) {
+                return new FakePaymentGateway;
+            }
+
+            return new MercadoPagoPaymentGateway(
+                http: app(Factory::class),
+                baseUrl: Config::string('services.mercado_pago.base_url'),
+                accessToken: Config::string('services.mercado_pago.access_token'),
+                webhookSecret: Config::string('services.mercado_pago.webhook_secret'),
+                webhookUrl: Config::string('services.mercado_pago.webhook_url'),
+                returnUrl: Config::string('services.mercado_pago.return_url'),
+                checkoutExpiryMinutes: Config::integer('services.mercado_pago.checkout_expiry_minutes'),
+                webhookToleranceSeconds: Config::integer('services.mercado_pago.webhook_tolerance_seconds'),
+                timeout: Config::integer('services.mercado_pago.timeout'),
+                connectTimeout: Config::integer('services.mercado_pago.connect_timeout'),
+            );
+        });
     }
 
     /**
@@ -63,6 +103,7 @@ class AppServiceProvider extends ServiceProvider
                 $user instanceof User ? (string) $user->id : ($request->ip() ?? 'unknown'),
             );
         });
+        RateLimiter::for('payment-webhooks', fn (Request $request): Limit => Limit::perMinute(120)->by($request->ip()));
     }
 
     /**

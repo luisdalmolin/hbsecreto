@@ -55,6 +55,12 @@ class User extends Authenticatable implements HasLocalePreference
         return $this->hasMany(NotificationPreference::class);
     }
 
+    /** @return HasMany<Order, $this> */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
     public function wantsPushNotification(NotificationCategory $category): bool
     {
         $enabled = $this->notificationPreferences()

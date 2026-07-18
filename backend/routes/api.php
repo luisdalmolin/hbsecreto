@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AssignmentController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ConversationController;
+use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DrawConstraintController;
 use App\Http\Controllers\Api\V1\DrawController;
 use App\Http\Controllers\Api\V1\EditionController;
@@ -13,6 +14,9 @@ use App\Http\Controllers\Api\V1\GroupMemberController;
 use App\Http\Controllers\Api\V1\InvitationController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
+use App\Http\Controllers\Api\V1\OrderController;
+use App\Http\Controllers\Api\V1\PaymentWebhookController;
+use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\PushDeviceController;
 use App\Http\Controllers\Api\V1\WishController;
 use App\Http\Middleware\SetUserLocale;
@@ -28,11 +32,15 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::get('invitations/{token}', [InvitationController::class, 'show'])
         ->middleware('throttle:invitations')
         ->name('invitations.show');
+    Route::post('payments/mercadopago/webhook', PaymentWebhookController::class)
+        ->middleware('throttle:payment-webhooks')
+        ->name('payments.mercadopago.webhook');
 
     Route::middleware(['auth:sanctum', SetUserLocale::class])->group(function (): void {
         Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::get('me', [AuthController::class, 'me'])->name('me');
         Route::patch('me', [AuthController::class, 'updateMe'])->name('me.update');
+        Route::get('dashboard', DashboardController::class)->name('dashboard.show');
         Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
         Route::put('notifications/read', [NotificationController::class, 'readAll'])->name('notifications.read_all');
         Route::put('notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
@@ -40,6 +48,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::put('notification-preferences', [NotificationPreferenceController::class, 'update'])->name('notification_preferences.update');
         Route::post('push-devices', [PushDeviceController::class, 'store'])->middleware('throttle:60,1')->name('push_devices.store');
         Route::delete('push-devices/{pushDevice}', [PushDeviceController::class, 'destroy'])->name('push_devices.destroy');
+        Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+        Route::post('orders/{order}/refund', [OrderController::class, 'refund'])->name('orders.refund');
         Route::get('groups', [GroupController::class, 'index'])->name('groups.index');
         Route::post('groups', [GroupController::class, 'store'])->name('groups.store');
         Route::get('groups/{group}', [GroupController::class, 'show'])->name('groups.show');
@@ -62,6 +73,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::get('groups/{group}/editions/{edition}', [EditionController::class, 'show'])->name('groups.editions.show');
             Route::patch('groups/{group}/editions/{edition}', [EditionController::class, 'update'])->name('groups.editions.update');
             Route::delete('groups/{group}/editions/{edition}', [EditionController::class, 'destroy'])->name('groups.editions.destroy');
+            Route::post('groups/{group}/editions/{edition}/pick-orders', [OrderController::class, 'store'])->name('groups.editions.pick_orders.store');
             Route::get('groups/{group}/editions/{edition}/participants', [EditionParticipantController::class, 'index'])->name('groups.editions.participants.index');
             Route::post('groups/{group}/editions/{edition}/participants', [EditionParticipantController::class, 'store'])->name('groups.editions.participants.store');
             Route::delete('groups/{group}/editions/{edition}/participants/{participant}', [EditionParticipantController::class, 'destroy'])->name('groups.editions.participants.destroy');
@@ -70,6 +82,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::put('groups/{group}/editions/{edition}/archive', [EditionLifecycleController::class, 'archive'])->name('groups.editions.archive');
             Route::get('groups/{group}/editions/{edition}/draw-constraints', [DrawConstraintController::class, 'index'])->name('groups.editions.draw_constraints.index');
             Route::post('groups/{group}/editions/{edition}/draw-constraints', [DrawConstraintController::class, 'store'])->name('groups.editions.draw_constraints.store');
+            Route::post('groups/{group}/editions/{edition}/draw-constraints/copy-from-previous', [DrawConstraintController::class, 'copyFromPrevious'])->name('groups.editions.draw_constraints.copy_from_previous');
             Route::delete('groups/{group}/editions/{edition}/draw-constraints/{drawConstraint}', [DrawConstraintController::class, 'destroy'])->name('groups.editions.draw_constraints.destroy');
             Route::get('groups/{group}/editions/{edition}/draw/preflight', [DrawController::class, 'preflight'])->name('groups.editions.draw.preflight');
             Route::post('groups/{group}/editions/{edition}/draw', [DrawController::class, 'store'])->name('groups.editions.draw.store');
@@ -79,6 +92,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::get('groups/{group}/editions/{edition}/conversations/{conversation}/messages', [ConversationController::class, 'messages'])->name('groups.editions.conversations.messages.index');
             Route::post('groups/{group}/editions/{edition}/conversations/{conversation}/messages', [ConversationController::class, 'store'])->middleware('throttle:messages')->name('groups.editions.conversations.messages.store');
             Route::put('groups/{group}/editions/{edition}/conversations/{conversation}/read', [ConversationController::class, 'read'])->name('groups.editions.conversations.read');
+            Route::get('groups/{group}/editions/{edition}/products/search', [ProductController::class, 'search'])->name('groups.editions.products.search');
             Route::get('groups/{group}/editions/{edition}/my-wishes', [WishController::class, 'index'])->name('groups.editions.my_wishes.index');
             Route::post('groups/{group}/editions/{edition}/my-wishes', [WishController::class, 'store'])->name('groups.editions.my_wishes.store');
             Route::put('groups/{group}/editions/{edition}/my-wishes/order', [WishController::class, 'reorder'])->name('groups.editions.my_wishes.reorder');

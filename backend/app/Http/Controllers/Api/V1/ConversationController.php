@@ -10,6 +10,7 @@ use App\Data\Api\V1\Conversations\ConversationThreadData;
 use App\Data\Api\V1\Conversations\CreateMessageData;
 use App\Data\Api\V1\Conversations\MarkConversationReadData;
 use App\Data\Api\V1\Conversations\MessageData;
+use App\Enums\ConversationType;
 use App\Enums\GroupMemberStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
@@ -35,7 +36,7 @@ final class ConversationController extends Controller
         path: '/api/v1/groups/{group}/editions/{edition}/conversations', operationId: 'listConversations', tags: ['Conversations'], security: [['bearerAuth' => []]],
         parameters: [new OA\PathParameter(name: 'group', required: true, schema: new OA\Schema(type: 'integer')), new OA\PathParameter(name: 'edition', required: true, schema: new OA\Schema(type: 'integer'))],
         responses: [
-            new OA\Response(response: 200, description: 'Assignment conversations visible to the authenticated participant.', content: new OA\JsonContent(ref: '#/components/schemas/ConversationCollection')),
+            new OA\Response(response: 200, description: 'Edition and assignment conversations visible to the authenticated participant.', content: new OA\JsonContent(ref: '#/components/schemas/ConversationCollection')),
             new OA\Response(response: 401, description: 'Authentication is required.', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
             new OA\Response(response: 403, description: 'An active edition participant is required.', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
             new OA\Response(response: 404, description: 'The group or edition is not visible.', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
@@ -66,9 +67,11 @@ final class ConversationController extends Controller
             });
         $baseQuery = Conversation::query()
             ->whereBelongsTo($edition)
-            ->whereHas('assignment', fn (Builder $assignments) => $assignments
-                ->where('giver_edition_participant_id', $participant->id)
-                ->orWhere('receiver_edition_participant_id', $participant->id))
+            ->where(fn (Builder $conversations) => $conversations
+                ->where('type', ConversationType::Edition)
+                ->orWhereHas('assignment', fn (Builder $assignments) => $assignments
+                    ->where('giver_edition_participant_id', $participant->id)
+                    ->orWhere('receiver_edition_participant_id', $participant->id)))
             ->with(['assignment.giver.groupMember.user', 'assignment.receiver.groupMember.user'])
             ->withMax('messages', 'created_at')
             ->addSelect(['unread_count' => $unreadCount]);
@@ -77,6 +80,7 @@ final class ConversationController extends Controller
             ->allowedIncludes()
             ->allowedSorts()
             ->allowedFields()
+            ->orderBy('type', 'desc')
             ->orderBy('id')
             ->get();
         $items = $conversations->map(fn (Conversation $conversation): ConversationData => $this->conversationData(
@@ -96,7 +100,7 @@ final class ConversationController extends Controller
         path: '/api/v1/groups/{group}/editions/{edition}/conversations/{conversation}/messages', operationId: 'getConversationMessages', tags: ['Conversations'], security: [['bearerAuth' => []]],
         parameters: [new OA\PathParameter(name: 'group', required: true, schema: new OA\Schema(type: 'integer')), new OA\PathParameter(name: 'edition', required: true, schema: new OA\Schema(type: 'integer')), new OA\PathParameter(name: 'conversation', required: true, schema: new OA\Schema(type: 'integer'))],
         responses: [
-            new OA\Response(response: 200, description: 'The latest messages in an assignment conversation.', content: new OA\JsonContent(ref: '#/components/schemas/ConversationThread')),
+            new OA\Response(response: 200, description: 'The latest messages in a visible conversation.', content: new OA\JsonContent(ref: '#/components/schemas/ConversationThread')),
             new OA\Response(response: 401, description: 'Authentication is required.', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
             new OA\Response(response: 403, description: 'Only conversation participants may read messages.', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
             new OA\Response(response: 404, description: 'The group, edition, or conversation is not visible.', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
@@ -113,10 +117,11 @@ final class ConversationController extends Controller
             ->allowedFields('messages.id', 'messages.conversation_id', 'messages.sender_edition_participant_id', 'messages.body', 'messages.created_at')
             ->orderByDesc('id')
             ->limit(100)
+            ->with('sender.groupMember.user')
             ->get()
             ->reverse()
             ->values();
-        $items = $messages->map(fn (Message $message): MessageData => MessageData::fromMessage($message, $participant));
+        $items = $messages->map(fn (Message $message): MessageData => MessageData::fromMessage($message, $conversation, $edition, $participant));
         /** @var DataCollection<int, MessageData> $data */
         $data = MessageData::collect($items, DataCollection::class);
         $lastMessageAt = $messages->last()?->created_at?->toIso8601String();
@@ -145,8 +150,11 @@ final class ConversationController extends Controller
     public function store(CreateMessageData $data, Group $group, Edition $edition, Conversation $conversation, Request $request, SendMessage $sendMessage): MessageData
     {
         $participant = $this->participantFor($edition, $request);
+        $conversation->load('assignment');
+        $message = $sendMessage->handle($conversation, $participant, $data->body);
+        $message->load('sender.groupMember.user');
 
-        return MessageData::fromMessage($sendMessage->handle($conversation, $participant, $data->body), $participant);
+        return MessageData::fromMessage($message, $conversation, $edition, $participant);
     }
 
     #[Authorize('view', 'conversation')]

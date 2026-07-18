@@ -2,6 +2,7 @@
 
 namespace App\Actions\Conversations;
 
+use App\Enums\ConversationType;
 use App\Enums\EditionStatus;
 use App\Enums\GroupMemberStatus;
 use App\Exceptions\DomainConflictException;
@@ -13,6 +14,7 @@ use App\Models\Message;
 use App\Models\User;
 use App\Notifications\ConversationMessageNotification;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 final class SendMessage
@@ -21,26 +23,62 @@ final class SendMessage
     {
         $message = DB::transaction(function () use ($conversation, $sender, $body): Message {
             $edition = Edition::query()->whereKey($conversation->edition_id)->lockForUpdate()->firstOrFail();
+            $lockedConversation = $edition->conversations()
+                ->whereKey($conversation->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            $edition->participants()
+                ->whereKey($sender->id)
+                ->whereHas('groupMember', fn ($members) => $members->where('status', GroupMemberStatus::Active))
+                ->firstOrFail();
 
-            if (! in_array($edition->status, [EditionStatus::Drawn, EditionStatus::Revealed], true)) {
+            $availableStatuses = $lockedConversation->type === ConversationType::Edition
+                ? [EditionStatus::Draft, EditionStatus::Open, EditionStatus::Drawn, EditionStatus::Revealed]
+                : [EditionStatus::Drawn, EditionStatus::Revealed];
+
+            if (! in_array($edition->status, $availableStatuses, true)) {
                 throw new DomainConflictException(
                     $edition->status === EditionStatus::Archived ? 'chat.archived' : 'chat.unavailable',
                 );
             }
 
-            $lockedConversation = $edition->conversations()
-                ->whereKey($conversation->id)
-                ->whereHas('assignment', fn ($assignments) => $assignments
-                    ->where('giver_edition_participant_id', $sender->id)
-                    ->orWhere('receiver_edition_participant_id', $sender->id))
-                ->lockForUpdate()
-                ->firstOrFail();
+            if ($lockedConversation->type === ConversationType::Assignment) {
+                $lockedConversation->assignment()
+                    ->where(function ($assignments) use ($sender): void {
+                        $assignments
+                            ->where('giver_edition_participant_id', $sender->id)
+                            ->orWhere('receiver_edition_participant_id', $sender->id);
+                    })
+                    ->firstOrFail();
+            }
 
             return $lockedConversation->messages()->create([
+                'edition_id' => $edition->id,
                 'sender_edition_participant_id' => $sender->id,
                 'body' => Str::of($body)->trim()->toString(),
             ]);
         }, attempts: 3);
+
+        if ($conversation->type === ConversationType::Edition) {
+            $senderUserId = $sender->groupMember()->firstOrFail()->user_id;
+            $edition = Edition::query()->findOrFail($conversation->edition_id);
+
+            User::query()
+                ->whereHas('groupMemberships', fn ($members) => $members
+                    ->where('group_id', $edition->group_id)
+                    ->where('status', GroupMemberStatus::Active)
+                    ->whereHas('editionParticipants', fn ($participants) => $participants
+                        ->where('edition_id', $edition->id)))
+                ->when($senderUserId !== null, fn ($users) => $users->whereKeyNot($senderUserId))
+                ->orderBy('id')
+                ->chunkById(200, fn ($users) => Notification::send($users, new ConversationMessageNotification(
+                    groupId: $edition->group_id,
+                    editionId: $edition->id,
+                    conversationId: $conversation->id,
+                )));
+
+            return $message;
+        }
 
         /** @var Assignment $assignment */
         $assignment = $conversation->assignment()->firstOrFail();

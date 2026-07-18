@@ -49,7 +49,7 @@ final class AssignmentController extends Controller
         $assignment = Assignment::query()
             ->whereBelongsTo($edition)
             ->whereBelongsTo($giver, 'giver')
-            ->with(['receiver.groupMember.user', 'receiver.wishes'])
+            ->with(['receiver.groupMember.user', 'receiver.wishes.product'])
             ->firstOrFail();
         $receiver = $assignment->receiver;
 

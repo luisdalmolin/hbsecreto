@@ -35,6 +35,9 @@ const resources = {
           evening: "Boa noite,",
         },
         notifications: "Notificações",
+        loading: "Carregando seu resumo…",
+        loadError: "Não foi possível carregar seu resumo.",
+        refreshError: "Não foi possível atualizar seu resumo.",
         countdown: "Faltam {{value}} dias para o Natal",
         draw: {
           eyebrow: "VOCÊ TIROU",
@@ -52,6 +55,36 @@ const resources = {
           pending: "Em preparação",
           draw: "Sortear",
           create: "Criar novo grupo",
+        },
+        featured: {
+          eyebrow: "EDIÇÃO EM DESTAQUE",
+          group: "Grupo · {{group}}",
+          participants: "{{count}} participante",
+          participants_other: "{{count}} participantes",
+          eventDate: "{{date}}",
+          budget: "{{budget}}",
+          messages: {
+            assignmentReady:
+              "Seu resultado está pronto e continua protegido até você escolher revelá-lo.",
+            drawn:
+              "O sorteio foi realizado. Acompanhe a edição até a revelação geral.",
+            revealed: "Os pares já foram revelados para o grupo.",
+            openAdmin:
+              "Revise a lista e as exclusões antes de realizar o sorteio.",
+            openParticipant: "Sua lista tem {{count}} desejo.",
+            openParticipant_other: "Sua lista tem {{count}} desejos.",
+            draftAdmin: "Finalize a lista, a data e as regras desta edição.",
+            draftParticipant:
+              "Esta edição ainda está sendo preparada pelos organizadores.",
+          },
+          actions: {
+            revealAssignment: "Revelar meu amigo secreto",
+            viewEdition: "Acompanhar edição",
+            viewResults: "Ver resultado completo",
+            prepareDraw: "Preparar sorteio",
+            updateWishes: "Atualizar meus desejos",
+            continueSetup: "Continuar preparação",
+          },
         },
         tabs: {
           home: "Início",
@@ -265,6 +298,16 @@ const resources = {
           currentTitle: "Exclusões atuais",
           currentCount: "{{count}} exclusão",
           currentCount_other: "{{count}} exclusões",
+          copyTitle: "Reutilizar exclusões",
+          copyHint:
+            "Copie as exclusões da edição anterior para os participantes que continuam no grupo.",
+          copy: "Copiar da edição anterior",
+          copying: "Copiando…",
+          copyResultTitle: "Exclusões anteriores",
+          copyNoPrevious:
+            "Não há uma edição anterior com exclusões para copiar.",
+          copyResultBody:
+            "{{copied}} exclusões copiadas. {{skipped}} regras foram ignoradas por já existirem, terem conflito ou envolverem pessoas fora desta edição.",
           empty: "Nenhuma exclusão adicionada.",
           emptyHint:
             "Se qualquer combinação for permitida, você já pode seguir para o sorteio.",
@@ -299,6 +342,21 @@ const resources = {
         wishesTitle: "Lista de desejos de {{name}}",
         wishesEmpty: "Essa pessoa ainda não adicionou nenhum desejo.",
       },
+      products: {
+        optional: "Produto (opcional)",
+        addOptional: "Buscar um produto",
+        change: "Trocar",
+        remove: "Remover",
+        open: "Ver produto",
+        searchLabel: "Buscar no Mercado Livre",
+        searchPlaceholder: "Ex.: livro de ficção científica",
+        search: "Buscar",
+        searching: "Buscando…",
+        choose: "Escolher este produto",
+        empty: "Nenhum produto encontrado para essa busca.",
+        queryRequired: "Digite pelo menos dois caracteres para buscar.",
+        openError: "Não foi possível abrir o link deste produto.",
+      },
       wishes: {
         title: "Lista de desejos",
         openMine: "Meus desejos",
@@ -324,16 +382,91 @@ const resources = {
           "Você ainda pode consultar seus desejos, mas não pode mais alterá-los.",
         loadError: "Não foi possível carregar seus desejos.",
       },
+      orders: {
+        title: "Escolher quem presentear",
+        subtitle: "Garanta uma combinação antes do sorteio.",
+        cardTitle: "Escolha garantida",
+        cardHint:
+          "Escolha quem você vai presentear e conclua o pagamento com segurança.",
+        open: "Ver escolha e pagamento",
+        loading: "Carregando sua escolha…",
+        loadError: "Não foi possível carregar sua escolha.",
+        howItWorksTitle: "Como funciona",
+        howItWorksBody:
+          "Depois da confirmação do pagamento, sua escolha entra automaticamente nas regras do sorteio.",
+        price: "Valor: {{value}}",
+        priceServerConfirmed:
+          "O valor final será confirmado pelo servidor antes do pagamento.",
+        person: "Participante",
+        chooseReceiver: "Quem você quer presentear?",
+        chooseReceiverHint:
+          "A pessoa escolhida fica garantida somente após a confirmação do pagamento.",
+        failedReceiverHint:
+          "Selecione novamente a mesma pessoa para gerar uma nova tentativa de pagamento.",
+        buy: "Garantir minha escolha",
+        confirmTitle: "Confirmar esta escolha?",
+        confirmBody:
+          "Você vai presentear {{receiver}}. O valor será confirmado pelo servidor e o pagamento será concluído no Mercado Pago.",
+        continueToPayment: "Ir para o pagamento",
+        current: "Pagamento atual",
+        receiver: "Pessoa escolhida: {{name}}",
+        openCheckout: "Abrir Mercado Pago",
+        invalidCheckoutUrl:
+          "O endereço de pagamento recebido não é seguro. Atualize o pedido e tente novamente.",
+        refresh: "Atualizar pagamento",
+        refund: "Solicitar reembolso",
+        refundConfirmTitle: "Reembolsar este pagamento?",
+        refundConfirmBody:
+          "Sua escolha deixará de valer para o sorteio. Depois do reembolso, esta compra não poderá ser refeita nesta edição.",
+        lockedTitle: "Escolha encerrada",
+        lockedBody:
+          "Novas escolhas e reembolsos não ficam disponíveis depois do sorteio.",
+        status: {
+          pending: "Aguardando pagamento",
+          paid: "Pagamento confirmado",
+          failed: "Pagamento não concluído",
+          refunded: "Pagamento reembolsado",
+        },
+        statusBody: {
+          pending:
+            "O Mercado Pago ainda está processando. Atualize o status depois de concluir o checkout.",
+          paid: "Tudo certo. Sua escolha está ativa e será respeitada no sorteio.",
+          failed:
+            "A tentativa não foi concluída. Você pode tentar novamente antes do sorteio.",
+          refunded:
+            "O valor foi reembolsado e esta escolha não participa mais do sorteio.",
+        },
+        return: {
+          title: "Retorno do pagamento",
+          verifying: "Confirmando com o servidor…",
+          invalid: "O pedido informado no retorno não é válido.",
+          loadError: "Não foi possível confirmar o pagamento.",
+          authoritativeHint:
+            "O status abaixo foi consultado diretamente no servidor.",
+          refresh: "Consultar novamente",
+          home: "Voltar ao início",
+          statusTitle: {
+            pending: "A confirmação ainda está pendente",
+            paid: "Pagamento confirmado",
+            failed: "O pagamento não foi concluído",
+            refunded: "Pagamento reembolsado",
+          },
+        },
+      },
       chat: {
         title: "Conversas",
-        subtitle: "Tire dúvidas sobre o presente sem estragar a surpresa.",
+        subtitle:
+          "Converse com o grupo e tire dúvidas sem estragar a surpresa.",
         open: "Abrir conversas",
+        groupConversation: "Conversa da edição",
+        groupConversationHint:
+          "Canal compartilhado por todos os participantes.",
         editionHint:
-          "Converse com quem você tirou e com seu próprio amigo secreto.",
+          "Converse com todo o grupo e, depois do sorteio, com seu par secreto.",
         loading: "Carregando conversas…",
         loadError: "Não foi possível carregar as conversas.",
         empty: "Nenhuma conversa disponível.",
-        emptyHint: "As conversas aparecem depois que o sorteio é realizado.",
+        emptyHint: "Entre na lista de participantes para acessar as conversas.",
         secretSanta: "Seu amigo secreto",
         unknownParticipant: "Participante",
         personYouDrew: "Pessoa que você tirou",

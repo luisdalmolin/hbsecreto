@@ -28,4 +28,12 @@ class ConversationFactory extends Factory
             ])->id,
         ];
     }
+
+    public function edition(): static
+    {
+        return $this->state(fn (): array => [
+            'type' => ConversationType::Edition,
+            'assignment_id' => null,
+        ]);
+    }
 }

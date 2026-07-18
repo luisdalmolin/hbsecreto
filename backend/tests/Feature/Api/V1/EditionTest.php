@@ -1,10 +1,18 @@
 <?php
 
+use App\Enums\ConversationType;
+use App\Enums\DrawConstraintSource;
+use App\Enums\DrawConstraintType;
 use App\Enums\EditionStatus;
+use App\Enums\OrderStatus;
+use App\Models\Conversation;
+use App\Models\DrawConstraint;
 use App\Models\Edition;
 use App\Models\EditionParticipant;
 use App\Models\Group;
 use App\Models\GroupMember;
+use App\Models\Message;
+use App\Models\Order;
 use App\Models\User;
 use App\Notifications\EditionRevealedNotification;
 use Illuminate\Support\Facades\Notification;
@@ -36,7 +44,9 @@ test('edition creation uses launch defaults and seeds only active members', func
     $edition = Edition::query()->findOrFail($editionId);
     expect($edition->participants()->pluck('group_member_id')->all())
         ->toContain($this->adminMember->id, $activeMember->id)
-        ->not->toContain($invitedMember->id);
+        ->not->toContain($invitedMember->id)
+        ->and($edition->conversations()->count())->toBe(1)
+        ->and($edition->conversations()->firstOrFail()->type)->toBe(ConversationType::Edition);
 });
 
 test('edition and participant lists are scoped to the selected tenant', function (): void {
@@ -191,6 +201,61 @@ test('an open edition cannot drop below two participants while a draft can', fun
     $this->deleteJson("/api/v1/groups/{$this->group->id}/editions/{$edition->id}/participants/{$firstParticipant->id}")
         ->assertNoContent();
     expect($edition->participants()->count())->toBe(1);
+});
+
+test('participants on either side of pending or paid purchase constraints cannot be removed', function (): void {
+    foreach ([OrderStatus::Pending, OrderStatus::Paid] as $status) {
+        foreach (['giver', 'receiver'] as $side) {
+            $edition = Edition::factory()->for($this->group)->create(['created_by' => $this->admin->id]);
+            $targetMember = GroupMember::factory()->for($this->group)->active()->create();
+            $counterpartMember = GroupMember::factory()->for($this->group)->active()->create();
+            $target = EditionParticipant::factory()->for($edition)->create([
+                'group_id' => $this->group->id,
+                'group_member_id' => $targetMember->id,
+            ]);
+            $counterpart = EditionParticipant::factory()->for($edition)->create([
+                'group_id' => $this->group->id,
+                'group_member_id' => $counterpartMember->id,
+            ]);
+            $order = Order::factory()->for($this->admin)->for($edition)->create(['status' => $status]);
+            $constraint = DrawConstraint::query()->create([
+                'edition_id' => $edition->id,
+                'type' => DrawConstraintType::MustPair,
+                'giver_edition_participant_id' => $side === 'giver' ? $target->id : $counterpart->id,
+                'receiver_edition_participant_id' => $side === 'receiver' ? $target->id : $counterpart->id,
+                'source' => DrawConstraintSource::Purchase,
+                'order_id' => $order->id,
+                'created_by' => null,
+            ]);
+
+            $this->deleteJson("/api/v1/groups/{$this->group->id}/editions/{$edition->id}/participants/{$target->id}")
+                ->assertConflict()
+                ->assertJsonPath('message', 'Este participante está vinculado a uma escolha comprada com pagamento pendente ou confirmado.');
+            $this->assertModelExists($target);
+            $this->assertModelExists($order);
+            $this->assertModelExists($constraint);
+        }
+    }
+});
+
+test('a participant with edition chat history gets a localized conflict instead of a database error', function (): void {
+    $edition = Edition::factory()->for($this->group)->create(['created_by' => $this->admin->id]);
+    $member = GroupMember::factory()->for($this->group)->active()->create();
+    $participant = EditionParticipant::factory()->for($edition)->create([
+        'group_id' => $this->group->id,
+        'group_member_id' => $member->id,
+    ]);
+    $conversation = Conversation::factory()->for($edition)->edition()->create();
+    $message = Message::factory()->for($conversation)->create([
+        'edition_id' => $edition->id,
+        'sender_edition_participant_id' => $participant->id,
+    ]);
+
+    $this->deleteJson("/api/v1/groups/{$this->group->id}/editions/{$edition->id}/participants/{$participant->id}")
+        ->assertConflict()
+        ->assertJsonPath('message', 'Este participante não pode ser removido porque já enviou mensagens nesta edição.');
+    $this->assertModelExists($participant);
+    $this->assertModelExists($message);
 });
 
 test('inactive and cross-group members cannot be added to a roster', function (): void {
