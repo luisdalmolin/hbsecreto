@@ -248,6 +248,39 @@ const resources = {
         confirmBody:
           "Os pares serão gravados e a lista não poderá mais ser alterada. Esta ação não pode ser desfeita.",
         success: "Sorteio realizado para {{count}} participantes.",
+        constraints: {
+          title: "Exclusões do sorteio",
+          subtitle: "Defina quem não pode tirar quem nesta edição.",
+          manage: "Gerenciar exclusões",
+          loading: "Carregando exclusões…",
+          loadError: "Não foi possível carregar as exclusões.",
+          newTitle: "Nova exclusão",
+          newHint:
+            "A regra vale nos dois sentidos: nenhuma das duas pessoas poderá tirar a outra.",
+          firstPerson: "Primeira pessoa",
+          secondPerson: "Segunda pessoa",
+          add: "Adicionar exclusão",
+          adding: "Adicionando…",
+          duplicate: "Esta exclusão já foi adicionada.",
+          currentTitle: "Exclusões atuais",
+          currentCount: "{{count}} exclusão",
+          currentCount_other: "{{count}} exclusões",
+          empty: "Nenhuma exclusão adicionada.",
+          emptyHint:
+            "Se qualquer combinação for permitida, você já pode seguir para o sorteio.",
+          unknownParticipant: "Participante",
+          remove: "Remover",
+          removeLabel: "Remover exclusão entre {{first}} e {{second}}",
+          removeConfirmTitle: "Remover esta exclusão?",
+          removeConfirmBody:
+            "{{first}} e {{second}} poderão tirar um ao outro novamente.",
+          readyTitle: "As regras permitem um sorteio",
+          readyBody: "Há uma combinação válida para {{count}} participantes.",
+          blockedTitle: "As regras impedem o sorteio",
+          lockedTitle: "Exclusões bloqueadas",
+          lockedBody:
+            "As exclusões não podem mais ser alteradas depois que o sorteio é realizado.",
+        },
       },
       assignments: {
         sealedTitle: "Seu resultado está protegido",

@@ -1,5 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import {
+  Ban,
   Eye,
   Gift,
   Heart,
@@ -8,7 +9,7 @@ import {
   Shuffle,
   Users,
 } from "lucide-react-native";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, View } from "react-native";
 
@@ -45,21 +46,24 @@ export default function EditionDetailScreen() {
   const [mutationError, setMutationError] = useState<unknown>();
   const [mutating, setMutating] = useState(false);
   const mounted = useMountedRef();
-  const load = async (signal: AbortSignal) => {
-    if (!groupId || !editionId) throw new Error(t("common.errors.notFound"));
-    const [group, edition, participants, members] = await Promise.all([
-      getGroup(groupId, { signal }),
-      getEdition(groupId, editionId, { signal }),
-      listEditionParticipants(groupId, editionId, { signal }),
-      listGroupMembers(groupId, { signal }),
-    ]);
-    return {
-      group,
-      edition,
-      participants,
-      members: members.data,
-    };
-  };
+  const load = useCallback(
+    async (signal: AbortSignal) => {
+      if (!groupId || !editionId) throw new Error(t("common.errors.notFound"));
+      const [group, edition, participants, members] = await Promise.all([
+        getGroup(groupId, { signal }),
+        getEdition(groupId, editionId, { signal }),
+        listEditionParticipants(groupId, editionId, { signal }),
+        listGroupMembers(groupId, { signal }),
+      ]);
+      return {
+        group,
+        edition,
+        participants,
+        members: members.data,
+      };
+    },
+    [editionId, groupId, t],
+  );
   const resource = useFocusResource(load);
   const isAdmin = Boolean(
     resource.data &&
@@ -221,6 +225,17 @@ export default function EditionDetailScreen() {
       {(edition.status === "draft" || edition.status === "open") && isAdmin ? (
         <Card className="gap-3 p-5">
           <Text variant="section">{t("editions.drawArea")}</Text>
+          <Button
+            label={t("draw.constraints.manage")}
+            variant="light"
+            leftIcon={<Ban color={palette.mintDeep} size={18} />}
+            onPress={() =>
+              router.push({
+                pathname: "/groups/[groupId]/editions/[editionId]/constraints",
+                params: routeParams,
+              })
+            }
+          />
           {edition.status === "draft" ? (
             <Button
               label={t("editions.open")}

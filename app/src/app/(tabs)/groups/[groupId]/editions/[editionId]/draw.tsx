@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { CheckCircle, Shuffle } from "lucide-react-native";
-import { useState } from "react";
+import { Ban, CheckCircle, Shuffle } from "lucide-react-native";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, View } from "react-native";
 
@@ -21,11 +21,14 @@ export default function DrawScreen() {
   const [mutationError, setMutationError] = useState<unknown>();
   const [drawing, setDrawing] = useState(false);
   const mounted = useMountedRef();
-  const load = (signal: AbortSignal) => {
-    if (!groupId || !editionId)
-      return Promise.reject(new Error(t("common.errors.notFound")));
-    return preflightDraw(groupId, editionId, { signal });
-  };
+  const load = useCallback(
+    (signal: AbortSignal) => {
+      if (!groupId || !editionId)
+        return Promise.reject(new Error(t("common.errors.notFound")));
+      return preflightDraw(groupId, editionId, { signal });
+    },
+    [editionId, groupId, t],
+  );
   const resource = useFocusResource(load);
 
   async function draw(): Promise<void> {
@@ -59,6 +62,21 @@ export default function DrawScreen() {
 
   return (
     <AppScreen title={t("draw.title")} subtitle={t("draw.subtitle")} back>
+      <Button
+        label={t("draw.constraints.manage")}
+        variant="light"
+        leftIcon={<Ban color={palette.mintDeep} size={18} />}
+        disabled={!groupId || !editionId || drawing}
+        onPress={() =>
+          router.push({
+            pathname: "/groups/[groupId]/editions/[editionId]/constraints",
+            params: {
+              groupId: String(groupId),
+              editionId: String(editionId),
+            },
+          })
+        }
+      />
       {resource.isLoading && !resource.data ? (
         <ScreenState kind="loading" title={t("draw.checking")} />
       ) : null}
